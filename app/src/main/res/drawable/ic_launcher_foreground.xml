@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 简洁的 "V" 字形 + 信号点，纯矢量，无需二进制图片资源 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF4FC3F7"
+        android:pathData="M34,34 L46,34 L54,60 L62,34 L74,34 L60,76 L48,76 Z" />
+    <path
+        android:fillColor="#FF81D4FA"
+        android:pathData="M24,30 h6 v6 h-6 z" />
+    <path
+        android:fillColor="#FF81D4FA"
+        android:pathData="M78,30 h6 v6 h-6 z" />
+    <path
+        android:fillColor="#FFB3E5FC"
+        android:pathData="M51,22 h6 v6 h-6 z" />
+</vector>

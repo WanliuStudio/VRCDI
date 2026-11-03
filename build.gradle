@@ -1,0 +1,24 @@
+// VRCDI —— 适配 Android Studio 4.2（AGP 4.2.x / Gradle 6.7.1 / JDK 8-11）
+// 说明：本工程的 Gradle 版本配置见 gradle/wrapper/gradle-wrapper.properties
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:4.2.2'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        // Shizuku 官方仓库：Maven Central 拉不到 dev.rikka.shizuku 时的备用源
+        maven { url 'https://maven.rikka.app/' }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

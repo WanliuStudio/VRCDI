@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <!-- ============ 连接设置 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <TextView
+                style="@style/CardTitle"
+                android:text="@string/card_connection" />
+
+            <!-- 目标设备：本机IP（127.0.0.1）/ 自定义 IP -->
+            <Spinner
+                android:id="@+id/spinner_ip_mode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="4dp" />
+
+            <EditText
+                android:id="@+id/input_ip"
+                style="@style/Input"
+                android:hint="@string/hint_target_ip"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/text_ip_mode_hint"
+                style="@style/Hint" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/input_port"
+                    style="@style/Input"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:hint="@string/hint_target_port"
+                    android:importantForAutofill="no"
+                    android:inputType="number"
+                    android:maxLines="1" />
+
+                <EditText
+                    android:id="@+id/input_interval"
+                    style="@style/Input"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:hint="@string/label_interval"
+                    android:importantForAutofill="no"
+                    android:inputType="number"
+                    android:maxLines="1" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_local_ip"
+                style="@style/Hint"
+                android:text="本机局域网 IP：获取中…" />
+
+            <TextView
+                android:id="@+id/text_launch_arg"
+                style="@style/Hint"
+                android:textIsSelectable="true" />
+
+            <CheckBox
+                android:id="@+id/check_ascii"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="仅发送 ASCII（中文会变问号，但一定能显示）"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <CheckBox
+                android:id="@+id/check_send_immediately"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="立即发送（关闭则只填进 VRChat 输入框）"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+            <CheckBox
+                android:id="@+id/check_notification_sound"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="播放提示音"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <!-- ============ 权限通道 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <TextView
+                style="@style/CardTitle"
+                android:text="@string/card_privilege" />
+
+            <TextView
+                android:id="@+id/text_privilege_mode"
+                style="@style/Body"
+                android:text="当前方式：Shizuku" />
+
+            <TextView
+                android:id="@+id/text_privilege_status"
+                style="@style/Hint"
+                android:text="尚未检测" />
+
+            <TextView
+                android:id="@+id/text_root_hint"
+                style="@style/Hint"
+                android:textColor="@color/warn"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_privilege"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/settings_privilege" />
+
+                <Button
+                    android:id="@+id/btn_recheck"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="重新检测" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_battery"
+                style="@style/Button"
+                android:text="@string/action_battery" />
+        </LinearLayout>
+
+        <!-- ============ 上报字段 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <TextView
+                style="@style/CardTitle"
+                android:text="@string/card_fields" />
+
+            <LinearLayout
+                android:id="@+id/container_fields"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_all_on"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="全选" />
+
+                <Button
+                    android:id="@+id/btn_all_off"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="全不选" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ 控制 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <TextView
+                android:id="@+id/text_running_state"
+                style="@style/Body"
+                android:text="未在上报" />
+
+            <TextView
+                android:id="@+id/text_foreground_app"
+                style="@style/Hint"
+                android:text="前台应用：检测中…" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btn_toggle"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/action_start" />
+
+                <Button
+                    android:id="@+id/btn_send_now"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/action_send_now" />
+
+                <Button
+                    android:id="@+id/btn_refresh"
+                    style="@style/Button"
+                    android:layout_width="0dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:text="@string/action_refresh" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ Chatbox 预览 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <TextView
+                style="@style/CardTitle"
+                android:text="@string/card_preview" />
+
+            <TextView
+                android:id="@+id/text_preview"
+                style="@style/Mono"
+                android:textIsSelectable="true" />
+
+            <TextView
+                android:id="@+id/text_preview_count"
+                style="@style/Hint"
+                android:text="0/144" />
+
+            <TextView
+                android:id="@+id/text_preview_hint"
+                style="@style/Hint"
+                android:textColor="@color/warn"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/text_warning"
+                style="@style/Hint"
+                android:textColor="@color/err"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- ============ 日志 ============ -->
+        <LinearLayout
+            style="@style/Card"
+            android:tag="card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/card_log" />
+
+                <Button
+                    android:id="@+id/btn_clear_log"
+                    style="@style/Button"
+                    android:layout_width="wrap_content"
+                    android:minWidth="0dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="@string/action_clear_log" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/text_log"
+                style="@style/Mono"
+                android:maxLines="12"
+                android:textIsSelectable="true" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

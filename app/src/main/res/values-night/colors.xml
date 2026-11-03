@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 深色模式只覆盖底色与文字色，accent/ok/warn/err 继续沿用 values/colors.xml -->
+    <color name="bg">#FF0F1216</color>
+    <color name="card_bg">#FF1A1F24</color>
+    <color name="text_primary">#FFE8EAED</color>
+    <color name="text_secondary">#FFA0A8B0</color>
+    <color name="divider">#FF2A3038</color>
+</resources>

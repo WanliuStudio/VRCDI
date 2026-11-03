@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VRCDI</string>
+
+    <string name="notif_channel_name">设备信息上报</string>
+    <string name="notif_channel_desc">通过 OSC Chatbox 向 VRChat 上报设备信息时保持前台运行</string>
+    <string name="notif_title">VRCDI 正在上报设备信息</string>
+    <string name="notif_stop">停止</string>
+
+    <string name="card_connection">连接设置</string>
+    <string name="card_privilege">权限通道</string>
+    <string name="card_fields">上报字段</string>
+    <string name="card_preview">Chatbox 预览</string>
+    <string name="card_log">发送日志</string>
+
+    <string name="hint_target_ip">自定义 IP，例如 192.168.1.10</string>
+    <string name="ip_mode_local">本机IP</string>
+    <string name="ip_mode_custom">自定义...</string>
+    <string name="hint_target_port">OSC 端口，默认 9000</string>
+    <string name="label_interval">上报间隔（秒）</string>
+
+    <string name="action_start">启动上报</string>
+    <string name="action_stop">停止上报</string>
+    <string name="action_send_now">立即发送一次</string>
+    <string name="action_refresh">重新采集</string>
+    <string name="action_battery">加入电池白名单</string>
+    <string name="action_clear_log">清空日志</string>
+    <string name="action_settings">设置</string>
+
+    <string name="settings_privilege">权限申请方式</string>
+    <string name="settings_about">关于VRCDI</string>
+
+    <string name="about_title">关于VRCDI</string>
+    <string name="about_version_label">软件版本</string>
+    <string name="about_author_label">作者：</string>
+    <string name="about_author">WanliuStudio、Qwen 3.8 Pro、DeepSeek-V4.1-Flash</string>
+    <string name="about_device_label">你的设备：</string>
+
+    <string name="not_available">不可用</string>
+    <string name="charging">充电中</string>
+</resources>

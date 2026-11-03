@@ -1,0 +1,77 @@
+{
+  "_说明": "型号代码 -> 传播名（系列名）映射表。key 为大写型号代码，value.series 为展示名。应用启动时会先尝试读取系统属性（ro.product.marketname 等），读不到再查这张表；用户也可以在应用私有目录 files/device_models.json 放同名文件覆盖本表。",
+  "_数据来源": "HED-AL00 / LMR-AL00 / LMR-AL10 三条来自华为商城与华为官网产品页（2026-05~2026-09 抓取）；其余条目来源较弱，标注 verified=false，请自行核实后再依赖。",
+  "_如何扩充": "按同样格式加一行即可，支持 exact（精确匹配型号代码）与 prefix（按前缀匹配，例如同一机型的 AL00/AL10/LX9 变体）。",
+  "devices": [
+    {
+      "model": "HED-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Pura 80",
+      "verified": true
+    },
+    {
+      "model": "LMR-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Pura 80 Pro",
+      "verified": true
+    },
+    {
+      "model": "LMR-AL10",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Pura 80 Ultra",
+      "verified": true
+    },
+    {
+      "model": "LMR-AL",
+      "match": "prefix",
+      "brand": "HUAWEI",
+      "series": "Pura 80 Pro",
+      "verified": false
+    },
+    {
+      "model": "KEE-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Pura 90",
+      "verified": false
+    },
+    {
+      "model": "SUP-AL90",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Mate 70 Air",
+      "verified": false
+    },
+    {
+      "model": "SLY-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "nova 15 Ultra",
+      "verified": false
+    },
+    {
+      "model": "PSN-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "nova 15",
+      "verified": false
+    },
+    {
+      "model": "SGT-AL00",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Mate 80 Pro",
+      "verified": false
+    },
+    {
+      "model": "DEL-AL20",
+      "match": "exact",
+      "brand": "HUAWEI",
+      "series": "Mate X7 典藏版",
+      "verified": false
+    }
+  ]
+}

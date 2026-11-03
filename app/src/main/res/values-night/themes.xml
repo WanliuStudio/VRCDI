@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        深色模式。原文件是 Android Studio 模板残留，父主题写的是
+        Theme.MaterialComponents.DayNight.DarkActionBar，但本工程不引入 Material Components，
+        链接阶段会报 “resource style/Theme.MaterialComponents... not found”，
+        它引用的 @color/purple_200 等颜色也不存在，必须换掉。
+        这里改用系统 Material 深色主题，与 values/themes.xml 保持同一套属性。
+    -->
+    <style name="Theme.VRCDI" parent="android:Theme.Material">
+        <item name="android:colorPrimary">@color/accent</item>
+        <item name="android:colorAccent">@color/accent</item>
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:textColorPrimary">@color/text_primary</item>
+    </style>
+</resources>

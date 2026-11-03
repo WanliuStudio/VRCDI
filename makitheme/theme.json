@@ -1,0 +1,12 @@
+{
+  "name": "Konuri Maki",
+  "colors": {
+    "background": "#0F1216",
+    "card": "#FF4D4D",
+    "text": "#0F1216",
+    "textSecondary": "#A0A8B0"
+  },
+  "images": {
+    "background": "images/background.png",
+  }
+}

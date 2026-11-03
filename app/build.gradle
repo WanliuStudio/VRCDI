@@ -1,0 +1,55 @@
+apply plugin: 'com.android.application'
+
+android {
+    // Android Studio 4.2 自带 SDK 30，这里不用更高的 compileSdk，避免 IDE 提示升级
+    compileSdkVersion 30
+    buildToolsVersion "30.0.3"
+
+    defaultConfig {
+        applicationId "com.vrcdevicecheck.osc"
+        // VRChat 移动端最低兼容 API 29（Android 10），本应用与之对齐
+        minSdkVersion 29
+        targetSdkVersion 30
+        versionCode 49
+        versionName "0.1.1 Alpha"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+        debug {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+// 源码里有中文字符串，必须显式指定 UTF-8，否则 Windows 下会编译出乱码
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    // Shizuku：以 shell(uid 2000) 身份读取受 SELinux 限制的 sysfs / procfs 节点。
+    //
+    // 版本阶梯（若 Sync 或编译失败，按顺序试）：
+    //   1) 12.1.0  —— 当前使用，与 compileSdk 30 时代接近，字节码最保守
+    //   2) 11.6.0  —— 更老更稳，但社区反馈 v11.x 及更早在 Android 14 上有 Binder 兼容问题
+    //   3) 13.1.5  —— 最新，功能与兼容性最好，但可能需要更高 compileSdk 与 AGP 7+，
+    //                 Android Studio 4.2 带不动时不要强上
+    //
+    // 如果 Shizuku 依赖始终无法在本机编译通过：本工程的 Root 通道不依赖 Shizuku，
+    // 只需删掉下面两行依赖、删掉 AndroidManifest 里的 ShizukuProvider 声明、
+    // 删掉 priv/ShizukuShell.java，并把 PrivilegeController 里的 SHIZUKU 分支指向 LocalShell，
+    // 其余代码不受影响。
+    implementation 'dev.rikka.shizuku:api:12.1.0'
+    implementation 'dev.rikka.shizuku:provider:12.1.0'
+
+    testImplementation 'junit:junit:4.13.2'
+}

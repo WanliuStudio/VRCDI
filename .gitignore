@@ -1,0 +1,30 @@
+# IDE
+*.iml
+.idea/
+
+# Gradle 与构建产物
+.gradle/
+build/
+app/build/
+/captures
+.externalNativeBuild
+.cxx
+
+# 本机路径（换台电脑就失效，不能进仓库）
+local.properties
+
+# 安装包
+*.apk
+*.aab
+
+# 签名文件与密钥，绝对不能进仓库
+*.jks
+*.keystore
+*.p12
+*.pfx
+keystore.properties
+
+# 系统 / 临时文件
+.DS_Store
+*.log
+*.hprof

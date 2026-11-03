@@ -1,0 +1,22 @@
+{
+  "_说明": "中兴（ZTE）设备表。model 必须与设备的 ro.product.model / Build.MODEL 完全一致（比较时忽略大小写）；series 是上报「设备产品名称」时显示的文字；match 支持 exact（默认，完全相等）和 prefix（型号以该串开头）。verified 只是标注，不参与显示。",
+  "_如何获取本机型号": "开启特权上报后看 Chatbox 预览里的型号，或在电脑上执行 adb shell getprop ro.product.model。",
+  "_如何扩充": "照着 devices 里的写法往数组里加机型即可，同一个 model 只保留一条；改完在「设置 → 设备表设置 → 按品牌创建设备表」里以品牌 ZTE 导入。",
+  "_已知来源": "W203DS = 中兴云电脑 逍遥系列（本机实测型号）；W20 前缀规则是给同系列其他 W20xx 机型的兜底，未逐一核实。",
+  "devices": [
+    {
+      "model": "W203DS",
+      "match": "exact",
+      "brand": "ZTE",
+      "series": "中兴云电脑 逍遥系列",
+      "verified": true
+    },
+    {
+      "model": "W20",
+      "match": "prefix",
+      "brand": "ZTE",
+      "series": "中兴云电脑",
+      "verified": false
+    }
+  ]
+}
