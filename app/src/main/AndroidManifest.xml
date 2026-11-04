@@ -10,6 +10,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 应用内更新：下载完成后交给系统安装器 -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- 检测"当前前台应用"：签名级权限，只能由用户在系统设置里手动授予，代码里会引导跳转 -->
     <uses-permission
@@ -57,9 +59,26 @@
             android:label="设备表设置" />
 
         <activity
+            android:name=".AppTableSettingsActivity"
+            android:exported="false"
+            android:label="应用表设置" />
+
+        <activity
             android:name=".ThemeSettingsActivity"
             android:exported="false"
             android:label="主题" />
+
+        <activity
+            android:name=".UpdateSettingsActivity"
+            android:exported="false"
+            android:label="软件更新设置" />
+
+        <!-- 应用内更新：把下载好的 APK 以 content:// 交给系统安装器 -->
+        <provider
+            android:name=".update.ApkProvider"
+            android:authorities="${applicationId}.apk"
+            android:exported="false"
+            android:grantUriPermissions="true" />
 
         <service
             android:name=".service.ReporterService"

@@ -249,12 +249,18 @@ public final class DeviceModelTables {
                 if (obj == null) continue;
                 String model = obj.optString("model").trim();
                 String series = obj.optString("series").trim();
+                String brand = obj.optString("brand").trim();
                 if (model.isEmpty() || series.isEmpty()) continue;
                 DeviceModelTable.MatchType match =
                         "prefix".equalsIgnoreCase(obj.optString("match"))
                                 ? DeviceModelTable.MatchType.PREFIX
                                 : DeviceModelTable.MatchType.EXACT;
-                list.add(new DeviceModelTable.Entry(model, match, series, obj.optBoolean("verified", false)));
+                list.add(new DeviceModelTable.Entry(
+                        model,
+                        brand.isEmpty() ? null : brand,
+                        match,
+                        series,
+                        obj.optBoolean("verified", false)));
             }
             return new DeviceModelTable(list);
         } catch (Throwable t) {

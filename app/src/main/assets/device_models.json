@@ -72,6 +72,13 @@
       "brand": "HUAWEI",
       "series": "Mate X7 典藏版",
       "verified": false
+    },
+    {
+      "model": "TYH212U",
+      "match": "exact",
+      "brand": "天翼一号",
+      "series": "2022",
+      "verified": true
     }
   ]
 }

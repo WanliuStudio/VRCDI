@@ -4,6 +4,7 @@ import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -11,8 +12,16 @@ import java.util.Set;
 /**
  * 把设备快照拼成 Chatbox 文本。纯逻辑，可单元测试。
  *
- * 硬约束：VRChat Chatbox 单条上限 144 字符（VRChat Wiki「Chatbox」，2026-04-15）。
- * 超长时按 {@link ReportField} 的声明顺序从末尾开始丢字段（先丢「前台应用」，再丢 GPU 相关项），
+ * 输出是分段的（每段一行），形如：
+ *
+ *   OPPO PCAT00
+ *   CPU: Qualcomm SM8550 2.21GHz 46.1℃ 10%
+ *   GPU: Adreno 740 不可用 41.3℃ 不可用
+ *   RAM: 3.9/5.5GB 71%
+ *   电量: 45% 充电中
+ *   App: VRCDI（本应用）
+ *
+ * 硬约束：VRChat Chatbox 单条上限 144 字符（含换行）。超长时从最后一段开始整段丢弃，
  * 并把被丢掉的字段回传给界面如实提示，绝不静默截断。
  */
 public final class ReportBuilder {
@@ -58,6 +67,17 @@ public final class ReportBuilder {
         }
     }
 
+    /** 一行文本 + 这一行包含的字段（用来算"丢了什么"） */
+    private static final class Line {
+        final String text;
+        final List<ReportField> fields;
+
+        Line(String text, List<ReportField> fields) {
+            this.text = text;
+            this.fields = fields;
+        }
+    }
+
     public static Report build(DeviceSnapshot snapshot, Set<ReportField> fields, boolean asciiOnly) {
         return build(snapshot, fields, asciiOnly, true);
     }
@@ -74,113 +94,142 @@ public final class ReportBuilder {
         }
         if (ordered.isEmpty()) return new Report("", ordered, ordered, false);
 
-        List<ReportField> kept = new ArrayList<>(ordered);
-        String text = render(snapshot, kept, asciiOnly, useProductName);
-
-        while (text.length() > CHATBOX_LIMIT && kept.size() > 1) {
-            kept.remove(kept.size() - 1);
-            text = render(snapshot, kept, asciiOnly, useProductName);
+        List<Line> lines = buildLines(snapshot, ordered, asciiOnly, useProductName);
+        while (lineText(lines).length() > CHATBOX_LIMIT && lines.size() > 1) {
+            lines.remove(lines.size() - 1);
         }
 
+        String text = lineText(lines);
         boolean hard = false;
         if (text.length() > CHATBOX_LIMIT) {
             text = text.substring(0, CHATBOX_LIMIT - 1) + "…";
             hard = true;
         }
 
+        Set<ReportField> includedSet = new LinkedHashSet<>();
+        for (Line line : lines) includedSet.addAll(line.fields);
+
+        List<ReportField> kept = new ArrayList<>();
         List<ReportField> dropped = new ArrayList<>();
         for (ReportField field : ordered) {
-            if (!kept.contains(field)) dropped.add(field);
+            if (includedSet.contains(field)) kept.add(field);
+            else dropped.add(field);
         }
         return new Report(text, kept, dropped, hard);
     }
 
-    /** 分组渲染：同组字段共用一个标签，既省字符也更好读 */
+    /** 分段渲染，返回用换行连接的多行文本 */
     public static String render(DeviceSnapshot snapshot, List<ReportField> fields, boolean asciiOnly) {
         return render(snapshot, fields, asciiOnly, true);
     }
 
     public static String render(DeviceSnapshot snapshot, List<ReportField> fields, boolean asciiOnly,
                                 boolean useProductName) {
-        List<String> chunks = new ArrayList<>(6);
+        return lineText(buildLines(snapshot, fields, asciiOnly, useProductName));
+    }
 
-        // 设备：品牌 + 型号（可选真实型号或产品名称）
-        List<String> device = new ArrayList<>(2);
-        if (fields.contains(ReportField.BRAND)) device.add(orNa(snapshot.brand));
+    private static List<Line> buildLines(DeviceSnapshot snapshot, List<ReportField> fields,
+                                         boolean asciiOnly, boolean useProductName) {
+        List<Line> lines = new ArrayList<>(6);
+
+        // 第一行：品牌 + 型号（真实型号或产品名称）
+        List<ReportField> deviceFields = new ArrayList<>(2);
+        StringBuilder device = new StringBuilder();
+        if (fields.contains(ReportField.BRAND)) {
+            append(device, orNa(snapshot.brand));
+            deviceFields.add(ReportField.BRAND);
+        }
         if (fields.contains(ReportField.MODEL)) {
             String modelText = useProductName && snapshot.seriesName != null
                     ? snapshot.seriesName
                     : snapshot.model;
-            device.add(orNa(modelText));
+            append(device, orNa(modelText));
+            deviceFields.add(ReportField.MODEL);
         }
-        if (!device.isEmpty()) chunks.add(join(device, " "));
+        if (device.length() > 0) lines.add(new Line(device.toString(), deviceFields));
 
-        // CPU
-        List<String> cpu = new ArrayList<>(5);
-        boolean anyCpu = false;
+        // CPU 行
+        List<ReportField> cpuFields = new ArrayList<>(4);
+        StringBuilder cpu = new StringBuilder();
         if (fields.contains(ReportField.CPU_NAME)) {
-            anyCpu = true;
-            cpu.add(orNa(snapshot.cpuName));
+            append(cpu, orNa(snapshot.cpuName));
+            cpuFields.add(ReportField.CPU_NAME);
         }
         if (fields.contains(ReportField.CPU_FREQ)) {
-            anyCpu = true;
-            cpu.add(freq(snapshot.cpuFreqMHz));
+            append(cpu, freq(snapshot.cpuFreqMHz));
+            cpuFields.add(ReportField.CPU_FREQ);
         }
         if (fields.contains(ReportField.CPU_TEMP)) {
-            anyCpu = true;
-            cpu.add(temp(snapshot.cpuTempC, asciiOnly));
+            append(cpu, temp(snapshot.cpuTempC, asciiOnly));
+            cpuFields.add(ReportField.CPU_TEMP);
         }
         if (fields.contains(ReportField.CPU_USAGE)) {
-            anyCpu = true;
-            cpu.add(pct(snapshot.cpuUsagePct));
+            append(cpu, pct(snapshot.cpuUsagePct));
+            cpuFields.add(ReportField.CPU_USAGE);
         }
-        if (anyCpu) {
-            cpu.add(0, "CPU");
-            chunks.add(join(cpu, " "));
-        }
+        if (!cpuFields.isEmpty()) lines.add(new Line("CPU: " + cpu, cpuFields));
 
-        // GPU
-        List<String> gpu = new ArrayList<>(5);
-        boolean anyGpu = false;
+        // GPU 行
+        List<ReportField> gpuFields = new ArrayList<>(4);
+        StringBuilder gpu = new StringBuilder();
         if (fields.contains(ReportField.GPU_NAME)) {
-            anyGpu = true;
-            gpu.add(orNa(snapshot.gpuName));
+            append(gpu, orNa(snapshot.gpuName));
+            gpuFields.add(ReportField.GPU_NAME);
         }
         if (fields.contains(ReportField.GPU_FREQ)) {
-            anyGpu = true;
-            gpu.add(freq(snapshot.gpuFreqMHz));
+            append(gpu, freq(snapshot.gpuFreqMHz));
+            gpuFields.add(ReportField.GPU_FREQ);
         }
         if (fields.contains(ReportField.GPU_TEMP)) {
-            anyGpu = true;
-            gpu.add(temp(snapshot.gpuTempC, asciiOnly));
+            append(gpu, temp(snapshot.gpuTempC, asciiOnly));
+            gpuFields.add(ReportField.GPU_TEMP);
         }
         if (fields.contains(ReportField.GPU_USAGE)) {
-            anyGpu = true;
-            gpu.add(pct(snapshot.gpuUsagePct));
+            append(gpu, pct(snapshot.gpuUsagePct));
+            gpuFields.add(ReportField.GPU_USAGE);
         }
-        if (anyGpu) {
-            gpu.add(0, "GPU");
-            chunks.add(join(gpu, " "));
-        }
+        if (!gpuFields.isEmpty()) lines.add(new Line("GPU: " + gpu, gpuFields));
 
+        // RAM 行
         if (fields.contains(ReportField.RAM)) {
-            chunks.add(ram(snapshot.ramUsedMb, snapshot.ramTotalMb));
+            List<ReportField> ramFields = new ArrayList<>(1);
+            ramFields.add(ReportField.RAM);
+            lines.add(new Line(ramLine(snapshot.ramUsedMb, snapshot.ramTotalMb), ramFields));
         }
 
+        // 电量行
         if (fields.contains(ReportField.BATTERY)) {
             String battery = snapshot.batteryPct == null ? NA : snapshot.batteryPct + "%";
-            // 严格按需求：只有真正在充电时才追加"充电中"，充满或未充电都不显示
             if (snapshot.charging) {
                 battery += asciiOnly ? " Charging" : " 充电中";
             }
-            chunks.add(battery);
+            List<ReportField> batteryFields = new ArrayList<>(1);
+            batteryFields.add(ReportField.BATTERY);
+            lines.add(new Line((asciiOnly ? "Battery: " : "电量: ") + battery, batteryFields));
         }
 
+        // 前台应用行
         if (fields.contains(ReportField.FOREGROUND_APP)) {
-            chunks.add((asciiOnly ? "App " : "前台 ") + orNa(snapshot.foregroundApp));
+            List<ReportField> appFields = new ArrayList<>(1);
+            appFields.add(ReportField.FOREGROUND_APP);
+            lines.add(new Line("App: " + orNa(snapshot.foregroundApp), appFields));
         }
 
-        return join(chunks, " ").trim();
+        return lines;
+    }
+
+    private static String lineText(List<Line> lines) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            if (i > 0) sb.append('\n');
+            sb.append(lines.get(i).text);
+        }
+        return sb.toString();
+    }
+
+    private static void append(StringBuilder sb, String part) {
+        if (sb.length() > 0) sb.append(' ');
+        sb.append(part);
     }
 
     private static String orNa(String value) {
@@ -203,17 +252,10 @@ public final class ReportBuilder {
         return String.format(Locale.US, "%.0f%%", value);
     }
 
-    private static String ram(Long usedMb, Long totalMb) {
-        if (usedMb == null || totalMb == null || totalMb <= 0) return "RAM " + NA;
-        return String.format(Locale.US, "RAM %.1f/%.1fGB", usedMb / 1024f, totalMb / 1024f);
-    }
-
-    private static String join(List<String> parts, String separator) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < parts.size(); i++) {
-            if (i > 0) sb.append(separator);
-            sb.append(parts.get(i));
-        }
-        return sb.toString();
+    private static String ramLine(Long usedMb, Long totalMb) {
+        if (usedMb == null || totalMb == null || totalMb <= 0) return "RAM: " + NA;
+        int pct = Math.round(usedMb * 100f / totalMb);
+        return String.format(Locale.US, "RAM: %.1f/%.1fGB %d%%",
+                usedMb / 1024f, totalMb / 1024f, pct);
     }
 }

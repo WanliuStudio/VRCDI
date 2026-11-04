@@ -468,11 +468,16 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         return super.onOptionsItemSelected(item);
     }
 
-    /** 权限申请方式：Shizuku / Root */
+    /** 权限申请方式：Shizuku / Root / 免授权 */
     private void showPrivilegeModeDialog() {
-        final PrivilegeMode[] modes = new PrivilegeMode[]{PrivilegeMode.SHIZUKU, PrivilegeMode.ROOT};
-        String[] labels = new String[]{modes[0].label, modes[1].label};
-        int checked = settings.getPrivilegeMode() == PrivilegeMode.ROOT ? 1 : 0;
+        final PrivilegeMode[] modes = new PrivilegeMode[]{
+                PrivilegeMode.SHIZUKU, PrivilegeMode.ROOT, PrivilegeMode.NONE};
+        String[] labels = new String[]{
+                modes[0].label, modes[1].label, "免授权（仅读系统开放信息）"};
+        int checked = 0;
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i] == settings.getPrivilegeMode()) checked = i;
+        }
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.settings_privilege))
@@ -498,16 +503,20 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         String brand = snapshot != null && snapshot.brand != null ? snapshot.brand : Build.BRAND;
         String model = snapshot != null && snapshot.model != null ? snapshot.model : Build.MODEL;
         String series = snapshot == null ? null : snapshot.seriesName;
+        String cpu = snapshot == null ? null : snapshot.cpuName;
+        String gpu = snapshot == null ? null : snapshot.gpuName;
 
         StringBuilder sb = new StringBuilder();
         sb.append("品牌：").append(brand == null ? "未知" : brand).append('\n');
         sb.append("型号：").append(model == null ? "未知" : model);
         if (series != null && !series.trim().isEmpty()) sb.append("（").append(series).append("）");
         sb.append('\n');
+        sb.append("CPU：").append(cpu == null || cpu.trim().isEmpty() ? "不可用" : cpu).append('\n');
+        sb.append("GPU：").append(gpu == null || gpu.trim().isEmpty() ? "不可用" : gpu).append('\n');
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "0.1.1 Alpha";
+        String versionName = "2.0.0 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =

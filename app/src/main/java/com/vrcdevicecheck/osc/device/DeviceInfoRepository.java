@@ -76,15 +76,19 @@ public class DeviceInfoRepository {
             }
         }
 
-        // Build.SOC_MODEL 需要 API 31，本工程 compileSdk 30 拿不到该常量，改用系统属性反射读取
+        // Build.SOC_MODEL / SOC_MANUFACTURER 需要 API 31，本工程 compileSdk 30 拿不到，
+        // 改用系统属性反射读取；属性没有时再反射读 Build 字段
         String socModel = SystemProps.get("ro.soc.model");
         if (socModel == null) socModel = SystemProps.socModelFromBuild();
+        String socManufacturer = SystemProps.get("ro.soc.manufacturer");
+        if (socManufacturer == null) socManufacturer = SystemProps.socManufacturerFromBuild();
 
         return new JavaSideInfo(
                 Build.BRAND,
                 Build.MODEL,
                 Build.HARDWARE,
                 socModel,
+                socManufacturer,
                 totalMb,
                 usedMb,
                 batteryLevel(),

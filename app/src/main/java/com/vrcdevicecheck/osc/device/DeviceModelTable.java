@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * 型号代码 -> 传播名（系列名）映射。
+ * 型号代码 -> 品牌 / 传播名（系列名）映射。
  *
  * 查找逻辑是纯函数，可单元测试；JSON 加载放在 {@link DeviceModelTables}，
  * 因为 org.json 在 JVM 单元测试里不可用。
@@ -22,12 +22,19 @@ public class DeviceModelTable {
 
     public static final class Entry {
         public final String model;
+        /** 设备表里写的品牌；为空表示不覆盖系统品牌 */
+        public final String brand;
         public final MatchType match;
         public final String series;
         public final boolean verified;
 
         public Entry(String model, MatchType match, String series, boolean verified) {
+            this(model, null, match, series, verified);
+        }
+
+        public Entry(String model, String brand, MatchType match, String series, boolean verified) {
             this.model = model;
+            this.brand = brand;
             this.match = match;
             this.series = series;
             this.verified = verified;
@@ -47,6 +54,17 @@ public class DeviceModelTable {
 
     /** 精确匹配优先于前缀匹配；同类里取模式串最长的一条（更具体的优先） */
     public String lookup(String modelCode) {
+        Entry entry = find(modelCode);
+        return entry == null ? null : entry.series;
+    }
+
+    /** 只查品牌；没写品牌的条目返回 null，调用方继续用系统品牌 */
+    public String lookupBrand(String modelCode) {
+        Entry entry = find(modelCode);
+        return entry == null ? null : entry.brand;
+    }
+
+    private Entry find(String modelCode) {
         if (modelCode == null) return null;
         String code = modelCode.trim().toUpperCase(Locale.US);
         if (code.isEmpty()) return null;
@@ -57,7 +75,7 @@ public class DeviceModelTable {
             if (!entry.model.toUpperCase(Locale.US).equals(code)) continue;
             if (bestExact == null || entry.model.length() > bestExact.model.length()) bestExact = entry;
         }
-        if (bestExact != null) return bestExact.series;
+        if (bestExact != null) return bestExact;
 
         Entry bestPrefix = null;
         for (Entry entry : entries) {
@@ -65,7 +83,7 @@ public class DeviceModelTable {
             if (!code.startsWith(entry.model.toUpperCase(Locale.US))) continue;
             if (bestPrefix == null || entry.model.length() > bestPrefix.model.length()) bestPrefix = entry;
         }
-        return bestPrefix == null ? null : bestPrefix.series;
+        return bestPrefix;
     }
 
     public int size() {

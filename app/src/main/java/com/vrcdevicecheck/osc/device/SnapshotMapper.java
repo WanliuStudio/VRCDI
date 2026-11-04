@@ -243,20 +243,45 @@ public final class SnapshotMapper {
     public static String cpuName(RawFacts facts, JavaSideInfo java) {
         String name = firstNonBlank(
                 facts.props.get("ro.soc.model"),
-                java.socModel,
+                java == null ? null : java.socModel,
                 facts.props.get("ro.board.platform"),
                 facts.props.get("ro.hardware"),
-                java.hardware);
+                java == null ? null : java.hardware);
         if (name == null) return null;
         // Build.HARDWARE / ro.hardware 在高通机型上只会给 "qcom"，给用户看没有意义
-        if ("qcom".equalsIgnoreCase(name)) return "Qualcomm";
-        if ("mtk".equalsIgnoreCase(name)) return "MediaTek";
+        if ("qcom".equalsIgnoreCase(name)) name = "Qualcomm";
+        else if ("mtk".equalsIgnoreCase(name)) name = "MediaTek";
+
+        // 型号前面补上厂商，例如 Unisoc T760 / Qualcomm SM8550
+        String vendor = firstNonBlank(
+                facts.props.get("ro.soc.manufacturer"),
+                java == null ? null : java.socManufacturer);
+        if (vendor != null) {
+            String lowerName = name.toLowerCase(Locale.US);
+            String lowerVendor = vendor.toLowerCase(Locale.US);
+            if (!lowerName.equals(lowerVendor) && !lowerName.startsWith(lowerVendor + " ")) {
+                return vendor + " " + name;
+            }
+        }
         return name;
     }
 
     public static String brand(RawFacts facts, JavaSideInfo java) {
-        return firstNonBlank(facts.props.get("ro.product.brand"),
-                facts.props.get("ro.product.manufacturer"), java.brand);
+        return brand(facts, java, null);
+    }
+
+    /**
+     * 品牌：设备表里显式写了 brand 的优先（例如 TYH212U -> 天翼一号），
+     * 否则用系统属性，再退回 Build.BRAND。
+     */
+    public static String brand(RawFacts facts, JavaSideInfo java, DeviceModelTable table) {
+        String code = firstNonBlank(facts.props.get("ro.product.model"),
+                java == null ? null : java.model);
+        String fromTable = (code == null || table == null) ? null : table.lookupBrand(code);
+        return firstNonBlank(fromTable,
+                facts.props.get("ro.product.brand"),
+                facts.props.get("ro.product.manufacturer"),
+                java == null ? null : java.brand);
     }
 
     public static String model(RawFacts facts, JavaSideInfo java) {
@@ -295,7 +320,7 @@ public final class SnapshotMapper {
                                      DeviceModelTable table, String source, String foregroundApp) {
         Long[] ram = ramUsedTotalMb(facts, java);
         return new DeviceSnapshot(
-                brand(facts, java),
+                brand(facts, java, table),
                 model(facts, java),
                 seriesName(facts, java, table),
                 cpuName(facts, java),

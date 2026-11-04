@@ -28,6 +28,7 @@ public class AppSettings {
     private static final String KEY_NOTIFICATION_SOUND = "notification_sound";
     private static final String KEY_FIELDS = "enabled_fields";
     private static final String KEY_MODEL_MODE = "model_display_mode";
+    private static final String KEY_UPDATE_SOURCE = "update_source";
     private static final String KEY_BATTERY_HINT = "battery_hint_shown";
 
     private final SharedPreferences sp;
@@ -107,6 +108,18 @@ public class AppSettings {
     public void setModelDisplayMode(ModelDisplayMode mode) {
         ModelDisplayMode value = mode == null ? ModelDisplayMode.PRODUCT_NAME : mode;
         sp.edit().putString(KEY_MODEL_MODE, value.key).apply();
+    }
+
+    /** 检查更新用的源：gitee / github */
+    public String getUpdateSource() {
+        String value = sp.getString(KEY_UPDATE_SOURCE, "gitee");
+        if (value == null || value.isEmpty()) value = "gitee";
+        return value;
+    }
+
+    public void setUpdateSource(String source) {
+        String value = "github".equalsIgnoreCase(source) ? "github" : "gitee";
+        sp.edit().putString(KEY_UPDATE_SOURCE, value).apply();
     }
 
     /**

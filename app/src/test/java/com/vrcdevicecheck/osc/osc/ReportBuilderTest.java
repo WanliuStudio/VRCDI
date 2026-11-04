@@ -18,14 +18,17 @@ import java.util.Set;
 public class ReportBuilderTest {
 
     @Test
-    public void rendersGroupsInFieldOrder() {
+    public void rendersGroupsInSeparateLines() {
         DeviceSnapshot snapshot = TestSnapshots.full();
         Set<ReportField> fields = EnumSet.of(
                 ReportField.BRAND, ReportField.MODEL,
                 ReportField.CPU_NAME, ReportField.CPU_FREQ, ReportField.CPU_TEMP, ReportField.CPU_USAGE,
                 ReportField.RAM, ReportField.BATTERY);
         String text = ReportBuilder.build(snapshot, fields, false).text;
-        assertEquals("HUAWEI Pura 80 CPU Kirin 9010S 1.80GHz 42.3℃ 23% RAM 6.1/11.7GB 78% 充电中", text);
+        assertEquals("HUAWEI Pura 80\n"
+                + "CPU: Kirin 9010S 1.80GHz 42.3℃ 23%\n"
+                + "RAM: 6.1/11.7GB 52%\n"
+                + "电量: 78% 充电中", text);
     }
 
     @Test
@@ -35,7 +38,7 @@ public class ReportBuilderTest {
 
         DeviceSnapshot notCharging = TestSnapshots.notCharging(66);
         String text = ReportBuilder.build(notCharging, EnumSet.of(ReportField.BATTERY), false).text;
-        assertEquals("66%", text);
+        assertEquals("电量: 66%", text);
         assertFalse(text.contains("充电中"));
     }
 
@@ -64,11 +67,11 @@ public class ReportBuilderTest {
     }
 
     @Test
-    public void longTextDropsLowestPriorityFieldsAndStaysWithinLimit() {
+    public void longTextDropsWholeLinesFromTheEnd() {
         DeviceSnapshot snapshot = new DeviceSnapshot(
                 "HUAWEI", "HED-AL00", "Pura 80",
-                "Kirin 9010S 高性能版", 1800, 42.3f, 23f,
-                "Maleoon 910 图形处理器", 750, 40.1f, 12f,
+                "Kirin 9010S 超高性能旗舰版移动处理器平台", 1800, 42.3f, 23f,
+                "Maleoon 910 超高性能图形处理器单元", 750, 40.1f, 12f,
                 6200L, 12000L,
                 78, true,
                 2000, new java.util.ArrayList<String>(), "Shizuku");
@@ -78,12 +81,10 @@ public class ReportBuilderTest {
         assertTrue("长度必须不超过 144，实际 " + report.charCount(),
                 report.charCount() <= ReportBuilder.CHATBOX_LIMIT);
         assertFalse(report.dropped.isEmpty());
-        // 电量与品牌型号优先级最高，必须保留
-        assertTrue(report.included.contains(ReportField.BATTERY));
+        // 第一行永远保留
         assertTrue(report.included.contains(ReportField.BRAND));
-        // GPU 相关项排在最后，最先被丢
-        assertTrue(report.dropped.contains(ReportField.GPU_USAGE)
-                || report.dropped.contains(ReportField.GPU_NAME));
+        // 最后一段（前台应用）最先被整段丢掉
+        assertTrue(report.dropped.contains(ReportField.FOREGROUND_APP));
         assertTrue(report.overLimit());
         assertTrue(report.limitHint().contains("省略"));
     }
@@ -101,6 +102,6 @@ public class ReportBuilderTest {
     public void gpuGroupGetsItsOwnLabel() {
         String text = ReportBuilder.render(TestSnapshots.full(),
                 Arrays.asList(ReportField.GPU_NAME, ReportField.GPU_USAGE), false);
-        assertEquals("GPU Maleoon 910 12%", text);
+        assertEquals("GPU: Maleoon 910 12%", text);
     }
 }

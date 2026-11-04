@@ -42,15 +42,25 @@ public final class SystemProps {
      * 比 ro.hardware（只会返回 "qcom"）有意义得多。
      */
     public static String socModelFromBuild() {
+        return buildString("SOC_MODEL");
+    }
+
+    /** Build.SOC_MANUFACTURER（API 31），例如 Unisoc / Qualcomm / MediaTek */
+    public static String socManufacturerFromBuild() {
+        return buildString("SOC_MANUFACTURER");
+    }
+
+    /** 反射读取 Build 里的任意 String 常量，字段不存在就返回 null */
+    private static String buildString(String fieldName) {
         try {
-            Field field = Build.class.getField("SOC_MODEL");
+            Field field = Build.class.getField(fieldName);
             Object value = field.get(null);
             if (value instanceof String) {
                 String text = ((String) value).trim();
                 return text.isEmpty() ? null : text;
             }
         } catch (Throwable ignored) {
-            // API 30 及以下没有这个字段，忽略
+            // API 30 及以下没有这些字段，忽略
         }
         return null;
     }

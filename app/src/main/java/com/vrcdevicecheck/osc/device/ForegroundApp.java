@@ -21,8 +21,21 @@ public final class ForegroundApp {
     /** VRChat 一体机版包名；写进 AndroidManifest 的 queries 后，Android 11+ 才解析得到它 */
     public static final String PKG_VRCHAT_QUEST = "com.vrchat.oculus.quest";
 
-    /** 允许事件往前看多久：覆盖切出去看两眼再回来的情况 */
-    private static final long LOOK_BACK_MS = 120000L;
+    /** VRChat 移动版（手机 / 一体机内的手机版） */
+    public static final String PKG_VRCHAT_MOBILE = "com.vrchat.mobile.playstore";
+
+    /**
+     * 事件回溯窗口，从近到远逐级放大。
+     *
+     * 之前固定只看 2 分钟：如果用户在 VRChat 里连续玩了好几分钟、期间没有任何新的
+     * ACTIVITY_RESUMED 事件，2 分钟窗口里就是空的，于是误判成"检测不到前台应用"。
+     * 现在依次尝试 2 分钟 / 6 小时 / 24 小时，第一次有结果就返回。
+     */
+    private static final long[] LOOK_BACK_STEPS_MS = new long[]{
+            2L * 60L * 1000L,
+            6L * 60L * 60L * 1000L,
+            24L * 60L * 60L * 1000L
+    };
 
     private ForegroundApp() {
     }
@@ -58,33 +71,47 @@ public final class ForegroundApp {
             UsageStatsManager usm =
                     (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
             if (usm == null) return null;
-            long now = System.currentTimeMillis();
-            UsageEvents events = usm.queryEvents(now - LOOK_BACK_MS, now);
-            if (events == null) return null;
 
-            UsageEvents.Event event = new UsageEvents.Event();
-            String latest = null;
-            while (events.hasNextEvent()) {
-                if (!events.getNextEvent(event)) break;
-                // ACTIVITY_RESUMED 自 API 29 起（旧名 MOVE_TO_FOREGROUND 同值）
-                if (event.getEventType() != UsageEvents.Event.ACTIVITY_RESUMED) continue;
-                String pkg = event.getPackageName();
-                if (pkg == null || pkg.isEmpty()) continue;
-                if (excludePackage != null && excludePackage.equals(pkg)) continue;
-                latest = pkg;
+            for (long lookBack : LOOK_BACK_STEPS_MS) {
+                String pkg = scanWindow(usm, lookBack, excludePackage);
+                if (pkg != null) return pkg;
             }
-            return latest;
+            return null;
         } catch (Throwable t) {
             return null;
         }
     }
 
-    /** 包名 -> 便于阅读的名字；解析不到（包可见性限制、已卸载）就原样返回包名 */
+    private static String scanWindow(UsageStatsManager usm, long lookBackMs, String excludePackage) {
+        long now = System.currentTimeMillis();
+        UsageEvents events = usm.queryEvents(now - lookBackMs, now);
+        if (events == null) return null;
+
+        UsageEvents.Event event = new UsageEvents.Event();
+        String latest = null;
+        while (events.hasNextEvent()) {
+            if (!events.getNextEvent(event)) break;
+            // ACTIVITY_RESUMED 自 API 29 起（旧名 MOVE_TO_FOREGROUND 同值）
+            if (event.getEventType() != UsageEvents.Event.ACTIVITY_RESUMED) continue;
+            String pkg = event.getPackageName();
+            if (pkg == null || pkg.isEmpty()) continue;
+            if (excludePackage != null && excludePackage.equals(pkg)) continue;
+            latest = pkg;
+        }
+        return latest;
+    }
+
+    /**
+     * 包名 -> 便于阅读的名字。
+     * 顺序：本应用 > VRChat 特判 > 应用表 > 系统应用名 > 包名本身。
+     */
     public static String label(Context context, String pkg) {
         if (pkg == null) return null;
         if (context != null && pkg.equals(context.getPackageName())) return "VRCDI（本应用）";
         if (PKG_VRCHAT_QUEST.equals(pkg)) return "VRChat（Quest）";
         if (context != null) {
+            String fromTable = AppNames.lookup(context, pkg);
+            if (fromTable != null && !fromTable.isEmpty()) return fromTable;
             try {
                 PackageManager pm = context.getPackageManager();
                 CharSequence name = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0));

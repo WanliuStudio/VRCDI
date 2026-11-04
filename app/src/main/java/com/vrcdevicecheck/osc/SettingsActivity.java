@@ -28,15 +28,17 @@ import rikka.shizuku.Shizuku;
 /**
  * 设置一级菜单。
  *
- * 会弹窗的两个条目（权限申请方式、关于VRCDI）直接在设置页里弹，
- * 不再返回首页去弹，弹完仍然停在设置页。
+ * 会弹窗的条目（权限申请方式、关于VRCDI）直接在设置页里弹，
+ * 不返回首页，弹完仍然停在设置页。
  */
 public class SettingsActivity extends Activity {
 
     private static final String[] ITEMS = new String[]{
             "权限申请方式",
             "设备表设置",
+            "应用表设置",
             "主题",
+            "软件更新设置",
             "关于VRCDI"
     };
 
@@ -73,7 +75,13 @@ public class SettingsActivity extends Activity {
                         startActivity(new Intent(SettingsActivity.this, DeviceTableSettingsActivity.class));
                         break;
                     case 2:
+                        startActivity(new Intent(SettingsActivity.this, AppTableSettingsActivity.class));
+                        break;
+                    case 3:
                         startActivity(new Intent(SettingsActivity.this, ThemeSettingsActivity.class));
+                        break;
+                    case 4:
+                        startActivity(new Intent(SettingsActivity.this, UpdateSettingsActivity.class));
                         break;
                     default:
                         showAboutDialog();
@@ -98,11 +106,18 @@ public class SettingsActivity extends Activity {
         super.onStop();
     }
 
-    /** 权限申请方式：Shizuku / Root，弹窗后仍停留在设置页 */
+    /** 权限申请方式：Shizuku / Root / 免授权 */
     private void showPrivilegeDialog() {
-        final PrivilegeMode[] modes = new PrivilegeMode[]{PrivilegeMode.SHIZUKU, PrivilegeMode.ROOT};
-        String[] labels = new String[]{modes[0].label, modes[1].label};
-        int checked = settings.getPrivilegeMode() == PrivilegeMode.ROOT ? 1 : 0;
+        final PrivilegeMode[] modes = new PrivilegeMode[]{
+                PrivilegeMode.SHIZUKU, PrivilegeMode.ROOT, PrivilegeMode.NONE};
+        String[] labels = new String[]{
+                modes[0].label, modes[1].label, "免授权（仅读系统开放信息）"};
+
+        int checked = 0;
+        PrivilegeMode current = settings.getPrivilegeMode();
+        for (int i = 0; i < modes.length; i++) {
+            if (modes[i] == current) checked = i;
+        }
 
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.settings_privilege))
@@ -123,6 +138,11 @@ public class SettingsActivity extends Activity {
      */
     private void applyPrivilegeMode(PrivilegeMode mode) {
         settings.setPrivilegeMode(mode);
+
+        if (mode == PrivilegeMode.NONE) {
+            toast("已切换为免授权：只能读取系统开放的信息");
+            return;
+        }
 
         if (mode == PrivilegeMode.ROOT) {
             toast("正在检测 root 授权…");
@@ -164,16 +184,20 @@ public class SettingsActivity extends Activity {
         String brand = snapshot != null && snapshot.brand != null ? snapshot.brand : Build.BRAND;
         String model = snapshot != null && snapshot.model != null ? snapshot.model : Build.MODEL;
         String series = snapshot == null ? null : snapshot.seriesName;
+        String cpu = snapshot == null ? null : snapshot.cpuName;
+        String gpu = snapshot == null ? null : snapshot.gpuName;
 
         StringBuilder sb = new StringBuilder();
         sb.append("品牌：").append(brand == null ? "未知" : brand).append('\n');
         sb.append("型号：").append(model == null ? "未知" : model);
         if (series != null && !series.trim().isEmpty()) sb.append("（").append(series).append("）");
         sb.append('\n');
+        sb.append("CPU：").append(cpu == null || cpu.trim().isEmpty() ? "不可用" : cpu).append('\n');
+        sb.append("GPU：").append(gpu == null || gpu.trim().isEmpty() ? "不可用" : gpu).append('\n');
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "0.1.1 Alpha";
+        String versionName = "2.0.0 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =
