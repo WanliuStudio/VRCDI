@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VRCDI — 把安卓设备状态送进 VRChat Chatbox</title>
+<meta name="description" content="VRCDI 通过 Shizuku / Root 读取安卓设备的 CPU、GPU、内存、电量等信息，用 OSC 发送到 VRChat 的 Chatbox。纯 Java，Android 10+。">
+<meta name="theme-color" content="#0b0f14">
+<meta property="og:title" content="VRCDI — 把安卓设备状态送进 VRChat Chatbox">
+<meta property="og:description" content="读取安卓设备信息，通过 OSC /chatbox/input 显示在 VRChat 聊天框。">
+<meta property="og:type" content="website">
+<link rel="icon" href="icon.png" type="image/png">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #121821;
+    --panel-2: #0f151d;
+    --line: #1f2937;
+    --text: #e8eaed;
+    --muted: #9aa4b2;
+    --accent: #4fc3f7;
+    --accent-dim: #1f6f8b;
+    --ok: #4ade80;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    background:
+      radial-gradient(900px 500px at 15% -10%, rgba(79, 195, 247, 0.14), transparent 60%),
+      radial-gradient(700px 400px at 100% 0%, rgba(124, 77, 255, 0.12), transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { width: min(1040px, 100% - 40px); margin: 0 auto; }
+
+  header.top {
+    border-bottom: 1px solid var(--line);
+    background: rgba(11, 15, 20, 0.75);
+    backdrop-filter: blur(8px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .top-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .brand .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  .top nav { display: flex; gap: 18px; font-size: 14px; color: var(--muted); }
+  .top nav a { color: var(--muted); }
+  .top nav a:hover { color: var(--text); text-decoration: none; }
+
+  .hero {
+    padding: 72px 0 48px;
+    text-align: center;
+  }
+
+  .app-icon-wrap {
+    width: 108px; height: 108px;
+    margin: 0 auto 22px;
+    border-radius: 26px;
+    background: linear-gradient(145deg, #17202b, #0d131a);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(79, 195, 247, 0.08);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  .app-icon-wrap img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+
+  .app-icon-wrap .fallback {
+    font-size: 42px; font-weight: 800; color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  h1 {
+    font-size: clamp(38px, 7vw, 58px);
+    line-height: 1.1;
+    margin: 0 0 14px;
+    letter-spacing: 1px;
+  }
+
+  h1 .thin { color: var(--muted); font-weight: 400; }
+
+  .tagline {
+    font-size: clamp(16px, 2.4vw, 19px);
+    color: var(--muted);
+    margin: 0 auto 18px;
+    max-width: 620px;
+  }
+
+  .badges {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    justify-content: center; margin-bottom: 26px;
+  }
+
+  .badges span {
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    background: rgba(18, 24, 33, 0.7);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+
+  .actions {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    justify-content: center; margin-bottom: 16px;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: var(--panel);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .btn:hover { text-decoration: none; transform: translateY(-1px); border-color: #2c3a4d; }
+
+  .btn.primary {
+    background: linear-gradient(135deg, #4fc3f7, #38bdf8);
+    border-color: transparent;
+    color: #05202b;
+  }
+
+  .btn.primary:hover { background: linear-gradient(135deg, #6fd0fa, #54c7fb); }
+
+  .btn small { font-weight: 500; opacity: 0.75; font-size: 12px; }
+
+  .hash {
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+    margin: 6px auto 0;
+    max-width: 760px;
+  }
+
+  .hash code { color: #b6c2d1; }
+  .hash button {
+    margin-left: 8px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .hash button:hover { color: var(--text); border-color: #2c3a4d; }
+
+  section { padding: 34px 0; }
+
+  h2 {
+    font-size: 22px;
+    margin: 0 0 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .lead { color: var(--muted); margin: 0 0 22px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: linear-gradient(180deg, rgba(18, 24, 33, 0.9), rgba(15, 21, 29, 0.9));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+  }
+
+  .card h3 {
+    font-size: 15px;
+    margin: 0 0 6px;
+    color: var(--text);
+  }
+
+  .card p { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+  .card .tag {
+    display: inline-block;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(79, 195, 247, 0.1);
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    border-radius: 6px;
+    padding: 1px 7px;
+    margin-bottom: 8px;
+  }
+
+  .steps { counter-reset: step; display: grid; gap: 10px; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 14px;
+    align-items: start;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+
+  .step::before {
+    counter-increment: step;
+    content: counter(step);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(79, 195, 247, 0.12);
+    border: 1px solid rgba(79, 195, 247, 0.3);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .step div { grid-column: 2; }
+  .step strong { display: block; margin-bottom: 2px; }
+  .step span { color: var(--muted); font-size: 14px; }
+
+  .notice {
+    border: 1px solid rgba(250, 204, 21, 0.25);
+    background: rgba(250, 204, 21, 0.06);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 13.5px;
+    color: #e7d9a8;
+  }
+
+  .notice strong { color: #facc15; }
+
+  .limits { display: grid; gap: 10px; font-size: 14px; color: var(--muted); }
+  .limits p { margin: 0; padding-left: 18px; position: relative; }
+  .limits p::before {
+    content: "";
+    position: absolute; left: 0; top: 0.65em;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent-dim);
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    margin-top: 30px;
+    padding: 26px 0 40px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  footer .row {
+    display: flex; flex-wrap: wrap; gap: 8px 18px;
+    justify-content: space-between;
+  }
+
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--text); }
+
+  code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace;
+    font-size: 0.92em;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1px 5px;
+    border-radius: 5px;
+  }
+
+  @media (max-width: 620px) {
+    .top nav { gap: 12px; font-size: 13px; }
+    .hero { padding: 48px 0 32px; }
+    .actions .btn { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap top-inner">
+    <div class="brand"><span class="dot"></span> VRCDI</div>
+    <nav>
+      <a href="#features">功能</a>
+      <a href="#usage">使用</a>
+      <a href="#notes">说明</a>
+      <a id="nav-releases" href="#" target="_blank" rel="noopener">更新日志</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="app-icon-wrap">
+      <span class="fallback">V</span>
+      <img id="app-icon" src="icon.png" alt="VRCDI 图标" onerror="this.style.display='none'">
+    </div>
+
+    <h1>VRCDI <span class="thin">/ 设备信息 · OSC · Chatbox</span></h1>
+    <p class="tagline">通过 Shizuku 或 Root 读取安卓设备的 CPU、GPU、内存与电量，用 OSC 实时显示在 VRChat 的聊天框里。</p>
+
+    <div class="badges">
+      <span>Android 10+</span>
+      <span>纯 Java · 无 AndroidX 界面</span>
+      <span>Shizuku / Root / 无特权</span>
+      <span id="badge-version">0.1.1 Alpha (Build 49)</span>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary" id="dl-gitee" href="#" target="_blank" rel="noopener">
+        国内下载 <small>Gitee</small>
+      </a>
+      <a class="btn" id="dl-github" href="#" target="_blank" rel="noopener">
+        GitHub 下载 <small>Releases</small>
+      </a>
+    </div>
+
+    <p class="hash">
+      SHA-256: <code id="sha256"></code>
+      <button type="button" id="copy-sha">复制</button>
+    </p>
+  </section>
+
+  <section id="features">
+    <h2>它能做什么</h2>
+    <p class="lead">13 项可勾选字段，按你的选择拼成一行文本，走 UDP OSC 发给 VRChat。</p>
+
+    <div class="grid">
+      <div class="card">
+        <span class="tag">采集</span>
+        <h3>13 项设备信息</h3>
+        <p>品牌、型号、CPU 名称 / 频率 / 温度 / 使用率、GPU 名称 / 频率 / 温度 / 使用率、RAM、电量与充电状态、前台应用。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">权限</span>
+        <h3>三种通道</h3>
+        <p>Shizuku（shell 身份）、Root（自动识别 KernelSU / APatch / Magisk 系）、无特权兜底。读不到的指标显示「不可用」，不编造数值。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">发送</span>
+        <h3>OSC Chatbox</h3>
+        <p>通过 <code>/chatbox/input</code> 发送，目标可选本机 127.0.0.1 或自定义 IP，支持立即发送、提示音与仅 ASCII。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">限制</span>
+        <h3>144 字符自适应</h3>
+        <p>遵守 Chatbox 单条上限，超长时按字段优先级从末尾丢弃，并在预览区提示「已自动省略」，不会静默截断。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">设备表</span>
+        <h3>型号 → 产品名称</h3>
+        <p>按品牌导入 JSON 设备表，可在「设备真实型号」与「设备产品名称」之间切换，无需重新编译。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">主题</span>
+        <h3>可换肤</h3>
+        <p>导入 zip / tar.gz 主题包，内含背景图、按钮图与配色；切换后自动重启生效。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="usage">
+    <h2>怎么用</h2>
+    <p class="lead">装好之后三步就能发。</p>
+
+    <div class="steps">
+      <div class="step">
+        <div><strong>授权</strong><span>右上角齿轮 → 权限申请方式，完成 Shizuku 或 Root 授权；不授权也能用无特权模式。</span></div>
+      </div>
+      <div class="step">
+        <div><strong>选目标</strong><span>VRChat 和手机在同一台设备选「本机IP」；手机发给 PC 选「自定义...」填 PC 的局域网 IP。</span></div>
+      </div>
+      <div class="step">
+        <div><strong>开 OSC</strong><span>VRChat 动作菜单 → Options → OSC → Enabled。跨设备时给 VRChat 加启动参数 <code>--osc=9000:&lt;PC 的局域网 IP&gt;:9001</code>。</span></div>
+      </div>
+      <div class="step">
+        <div><strong>启动上报</strong><span>勾选要展示的字段，点「启动上报」，Chatbox 里就能看到设备信息。</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="notes">
+    <h2>已知限制</h2>
+
+    <div class="limits">
+      <p><strong>GPU 数据最不可靠</strong>：安卓没有公开 API 获取 GPU 频率 / 温度 / 占用，靠厂商各自的 sysfs 节点，很多机型即使有 root 也读不到。</p>
+      <p><strong>Quest 一体机</strong>可以安装运行，但无 root、Shizuku 非官方支持，温度频率基本不可用。</p>
+      <p><strong>前台应用</strong>需要系统「使用情况访问」权限，未授权时该字段显示「不可用」。</p>
+      <p>设备表与主题为首次加入，遇到问题欢迎到仓库提 Issue。</p>
+    </div>
+
+    <div class="notice" style="margin-top:18px;">
+      <strong>下载提示：</strong>当前提供的是 debug 签名包，方便直接安装体验；正式签名包会在后续版本提供。安装前请确认系统为 Android 10（API 29）及以上。
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap row">
+    <span>© 2026 WanliuStudio · MIT License</span>
+    <span>
+      <a id="foot-github" href="#" target="_blank" rel="noopener">GitHub</a> ·
+      <a id="foot-gitee" href="#" target="_blank" rel="noopener">Gitee</a> ·
+      <a id="foot-releases" href="#" target="_blank" rel="noopener">Releases</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  /*
+   * ↓↓↓ 需要你改的地方都在这里 ↓↓↓
+   *
+   * 1. giteeDownload / githubDownload 换成真实的「附件直链」。
+   *    GitHub：Releases → 右键 APK → 复制链接，形如
+   *            https://github.com/WanliuStudio/VRCDI/releases/download/0.1.1-Alpha/文件名.apk
+   *    Gitee ：发行版 → 右键附件 → 复制链接，形如
+   *            https://gitee.com/WanliuStudio/VRCDI/releases/download/0.1.1-Alpha/文件名.apk
+   * 2. sha256 换成你上传的那个 APK 的哈希（重新构建后要重新算）。
+   */
+  const CONFIG = {
+    version: '0.1.1 Alpha (Build 49)',
+    sha256: '4fb0c0b37b70fdfc56c697cfd7f5323333bef918b31158c6280c8cb620240db4',
+    giteeDownload: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/0.1.1-Alpha/VRCDI-0.1.1-alpha-debug.apk',
+    githubDownload: 'https://github.com/WanliuStudio/VRCDI/releases/download/0.1.1-Alpha/VRCDI-0.1.1-alpha-debug.apk',
+    giteeRepo: 'https://gitee.com/WanliuStudio/VRCDI',
+    githubRepo: 'https://github.com/WanliuStudio/VRCDI',
+    releases: 'https://github.com/WanliuStudio/VRCDI/releases'
+  };
+
+  function byId(id) { return document.getElementById(id); }
+
+  byId('dl-gitee').href = CONFIG.giteeDownload;
+  byId('dl-github').href = CONFIG.githubDownload;
+  byId('foot-github').href = CONFIG.githubRepo;
+  byId('foot-gitee').href = CONFIG.giteeRepo;
+  byId('foot-releases').href = CONFIG.releases;
+  byId('nav-releases').href = CONFIG.releases;
+  byId('badge-version').textContent = CONFIG.version;
+  byId('sha256').textContent = CONFIG.sha256;
+
+  byId('copy-sha').addEventListener('click', function () {
+    const text = CONFIG.sha256;
+    const done = function () {
+      const btn = byId('copy-sha');
+      btn.textContent = '已复制';
+      setTimeout(function () { btn.textContent = '复制'; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, done);
+    } else {
+      const input = document.createElement('textarea');
+      input.value = text;
+      document.body.appendChild(input);
+      input.select();
+      try { document.execCommand('copy'); } catch (e) { }
+      document.body.removeChild(input);
+      done();
+    }
+  });
+</script>
+
+</body>
+</html>
