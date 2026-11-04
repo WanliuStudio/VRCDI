@@ -9,6 +9,8 @@
 <meta property="og:title" content="VRCDI — 把安卓设备状态送进 VRChat Chatbox">
 <meta property="og:description" content="读取安卓设备信息，通过 OSC /chatbox/input 显示在 VRChat 聊天框。">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://wanliustudio.github.io/VRCDI/icon.png">
+<meta name="twitter:card" content="summary">
 <link rel="icon" href="icon.png" type="image/png">
 <style>
   :root {
@@ -89,16 +91,22 @@
     background: linear-gradient(145deg, #17202b, #0d131a);
     border: 1px solid var(--line);
     box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(79, 195, 247, 0.08);
-    display: flex; align-items: center; justify-content: center;
+    position: relative;
     overflow: hidden;
   }
 
   .app-icon-wrap img {
+    position: absolute;
+    inset: 0;
     width: 100%; height: 100%; object-fit: cover;
     display: block;
+    z-index: 1;
   }
 
   .app-icon-wrap .fallback {
+    position: absolute;
+    inset: 0;
+    display: flex; align-items: center; justify-content: center;
     font-size: 42px; font-weight: 800; color: var(--accent);
     letter-spacing: 2px;
   }
@@ -315,7 +323,7 @@
       <a href="#features">功能</a>
       <a href="#usage">使用</a>
       <a href="#notes">说明</a>
-      <a id="nav-releases" href="#" target="_blank" rel="noopener">更新日志</a>
+      <a id="nav-releases" href="https://github.com/WanliuStudio/VRCDI/releases" target="_blank" rel="noopener">更新日志</a>
     </nav>
   </div>
 </header>
@@ -334,15 +342,15 @@
     <div class="badges">
       <span>Android 10+</span>
       <span>纯 Java · 无 AndroidX 界面</span>
-      <span>Shizuku / Root / 无特权</span>
+      <span>Shizuku / Root / 免授权</span>
       <span id="badge-version">2.0.0 Omega (Build 100)</span>
     </div>
 
     <div class="actions">
-      <a class="btn primary" id="dl-gitee" href="#" target="_blank" rel="noopener">
+      <a class="btn primary" id="dl-gitee" href="https://gitee.com/WanliuStudio/VRCDI/releases/download/2.0.0-Omega/VRCDI-2.0.0-omega.apk" target="_blank" rel="noopener">
         国内下载 <small>Gitee</small>
       </a>
-      <a class="btn" id="dl-github" href="#" target="_blank" rel="noopener">
+      <a class="btn" id="dl-github" href="https://github.com/WanliuStudio/VRCDI/releases/download/2.0.0-Omega/VRCDI-2.0.0-omega.apk" target="_blank" rel="noopener">
         GitHub 下载 <small>Releases</small>
       </a>
     </div>
@@ -355,7 +363,7 @@
 
   <section id="features">
     <h2>它能做什么</h2>
-    <p class="lead">13 项可勾选字段，按你的选择拼成一行文本，走 UDP OSC 发给 VRChat。</p>
+    <p class="lead">13 项可勾选字段，按你的选择分段拼成多行文本，走 UDP OSC 发给 VRChat。</p>
 
     <div class="grid">
       <div class="card">
@@ -367,7 +375,7 @@
       <div class="card">
         <span class="tag">权限</span>
         <h3>三种通道</h3>
-        <p>Shizuku（shell 身份）、Root（自动识别 KernelSU / APatch / Magisk 系）、无特权兜底。读不到的指标显示「不可用」，不编造数值。</p>
+        <p>Shizuku（shell 身份）、Root（自动识别 KernelSU / APatch / Magisk 系）、免授权兜底。读不到的指标显示「不可用」，不编造数值。</p>
       </div>
 
       <div class="card">
@@ -393,16 +401,34 @@
         <h3>可换肤</h3>
         <p>导入 zip / tar.gz 主题包，内含背景图、按钮图与配色；切换后自动重启生效。</p>
       </div>
+
+      <div class="card">
+        <span class="tag">分段</span>
+        <h3>多行显示</h3>
+        <p>每类信息单独一行：品牌型号 / CPU / GPU / RAM / 电量 / App，超出 144 字符时自动整段裁剪。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">应用表</span>
+        <h3>包名 → 应用名</h3>
+        <p>导入包名映射后，前台应用显示成「微信」「QQ」「VRChat」这样的名字，而不是一串包名。</p>
+      </div>
+
+      <div class="card">
+        <span class="tag">更新</span>
+        <h3>应用内更新</h3>
+        <p>设置里可选 Gitee 或 GitHub 作为更新源，检查新版本、下载 APK 并直接调起系统安装器。</p>
+      </div>
     </div>
   </section>
 
   <section id="usage">
     <h2>怎么用</h2>
-    <p class="lead">装好之后三步就能发。</p>
+    <p class="lead">装好之后四步就能发。</p>
 
     <div class="steps">
       <div class="step">
-        <div><strong>授权</strong><span>右上角齿轮 → 权限申请方式，完成 Shizuku 或 Root 授权；不授权也能用无特权模式。</span></div>
+        <div><strong>授权</strong><span>右上角齿轮 → 权限申请方式，完成 Shizuku 或 Root 授权；也可以直接选「免授权」。</span></div>
       </div>
       <div class="step">
         <div><strong>选目标</strong><span>VRChat 和手机在同一台设备选「本机IP」；手机发给 PC 选「自定义...」填 PC 的局域网 IP。</span></div>
@@ -423,7 +449,7 @@
       <p><strong>GPU 数据最不可靠</strong>：安卓没有公开 API 获取 GPU 频率 / 温度 / 占用，靠厂商各自的 sysfs 节点，很多机型即使有 root 也读不到。</p>
       <p><strong>Quest 一体机</strong>可以安装运行，但无 root、Shizuku 非官方支持，温度频率基本不可用。</p>
       <p><strong>前台应用</strong>需要系统「使用情况访问」权限，未授权时该字段显示「不可用」。</p>
-      <p>设备表与主题为首次加入，遇到问题欢迎到仓库提 Issue。</p>
+      <p>设备表、主题、应用表与应用内更新都还在早期阶段，遇到问题欢迎到仓库提 Issue。</p>
     </div>
 
     <div class="notice" style="margin-top:18px;">
@@ -437,9 +463,9 @@
   <div class="wrap row">
     <span>© 2026 WanliuStudio · MIT License</span>
     <span>
-      <a id="foot-github" href="#" target="_blank" rel="noopener">GitHub</a> ·
-      <a id="foot-gitee" href="#" target="_blank" rel="noopener">Gitee</a> ·
-      <a id="foot-releases" href="#" target="_blank" rel="noopener">Releases</a>
+      <a id="foot-github" href="https://github.com/WanliuStudio/VRCDI" target="_blank" rel="noopener">GitHub</a> ·
+      <a id="foot-gitee" href="https://gitee.com/WanliuStudio/VRCDI" target="_blank" rel="noopener">Gitee</a> ·
+      <a id="foot-releases" href="https://github.com/WanliuStudio/VRCDI/releases" target="_blank" rel="noopener">Releases</a>
     </span>
   </div>
 </footer>
