@@ -29,6 +29,7 @@ public class AppSettings {
     private static final String KEY_FIELDS = "enabled_fields";
     private static final String KEY_MODEL_MODE = "model_display_mode";
     private static final String KEY_UPDATE_SOURCE = "update_source";
+    private static final String KEY_AUTO_UPDATE = "auto_update_check";
     private static final String KEY_BATTERY_HINT = "battery_hint_shown";
 
     private final SharedPreferences sp;
@@ -120,6 +121,15 @@ public class AppSettings {
     public void setUpdateSource(String source) {
         String value = "github".equalsIgnoreCase(source) ? "github" : "gitee";
         sp.edit().putString(KEY_UPDATE_SOURCE, value).apply();
+    }
+
+    /** 启动时是否静默检查更新（默认关） */
+    public boolean isAutoUpdateCheck() {
+        return sp.getBoolean(KEY_AUTO_UPDATE, false);
+    }
+
+    public void setAutoUpdateCheck(boolean enabled) {
+        sp.edit().putBoolean(KEY_AUTO_UPDATE, enabled).apply();
     }
 
     /**

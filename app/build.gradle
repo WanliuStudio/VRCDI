@@ -10,8 +10,8 @@ android {
         // VRChat 移动端最低兼容 API 29（Android 10），本应用与之对齐
         minSdkVersion 29
         targetSdkVersion 30
-        versionCode 101
-        versionName "2.0.1 Omega"
+        versionCode 103
+        versionName "2.0.3 Omega"
     }
 
     buildTypes {

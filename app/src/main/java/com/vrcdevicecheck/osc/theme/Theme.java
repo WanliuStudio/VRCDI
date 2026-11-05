@@ -7,6 +7,8 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 
+import com.vrcdevicecheck.osc.util.JsonRepair;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -63,7 +65,7 @@ public final class Theme {
         File jsonFile = new File(dir, "theme.json");
         if (!jsonFile.isFile()) return null;
         try {
-            JSONObject root = new JSONObject(readText(jsonFile));
+            JSONObject root = new JSONObject(JsonRepair.repair(readText(jsonFile)));
             String name = root.optString("name", "").trim();
             if (name.isEmpty()) name = id;
 

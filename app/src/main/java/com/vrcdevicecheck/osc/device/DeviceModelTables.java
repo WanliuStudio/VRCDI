@@ -2,6 +2,8 @@ package com.vrcdevicecheck.osc.device;
 
 import android.content.Context;
 
+import com.vrcdevicecheck.osc.util.JsonRepair;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -229,10 +231,8 @@ public final class DeviceModelTables {
      */
     public static DeviceModelTable parse(String json) {
         if (json == null) return null;
-        String text = json.trim();
-        if (text.isEmpty()) return null;
-        // Windows 记事本保存 UTF-8 会带 BOM，先去掉，否则 JSONObject 解析会失败
-        if (text.charAt(0) == '\uFEFF') text = text.substring(1).trim();
+        String text = JsonRepair.repair(json);
+        if (text == null || text.isEmpty()) return null;
         try {
             JSONArray devices = null;
             if (text.startsWith("{")) {

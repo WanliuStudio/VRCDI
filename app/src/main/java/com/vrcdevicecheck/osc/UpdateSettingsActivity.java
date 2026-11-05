@@ -7,6 +7,8 @@ import android.content.pm.PackageInfo;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
@@ -61,6 +63,19 @@ public class UpdateSettingsActivity extends Activity {
         current.setTextSize(15f);
         current.setText("当前版本：" + versionName() + "（Build " + versionCode() + "）");
         root.addView(current);
+
+        CheckBox autoCheck = new CheckBox(this);
+        autoCheck.setText("打开应用时自动检查更新（静默，默认关闭）");
+        autoCheck.setTextSize(14f);
+        autoCheck.setPadding(0, dp(10), 0, 0);
+        autoCheck.setChecked(settings.isAutoUpdateCheck());
+        autoCheck.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                settings.setAutoUpdateCheck(isChecked);
+            }
+        });
+        root.addView(autoCheck);
 
         TextView sourceLabel = new TextView(this);
         sourceLabel.setText("更新源");
@@ -268,7 +283,7 @@ public class UpdateSettingsActivity extends Activity {
             PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
             return info.versionName;
         } catch (Throwable t) {
-            return "2.0.1 Omega";
+            return "2.0.3 Omega";
         }
     }
 

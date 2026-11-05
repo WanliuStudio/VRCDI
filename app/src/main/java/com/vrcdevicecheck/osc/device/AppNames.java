@@ -2,6 +2,8 @@ package com.vrcdevicecheck.osc.device;
 
 import android.content.Context;
 
+import com.vrcdevicecheck.osc.util.JsonRepair;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -101,9 +103,8 @@ public final class AppNames {
     /** @return 解析是否成功（空表也算成功） */
     private static boolean parseInto(Map<String, String> target, String json) {
         if (json == null) return false;
-        String text = json.trim();
-        if (text.isEmpty()) return false;
-        if (text.charAt(0) == '\uFEFF') text = text.substring(1).trim();
+        String text = JsonRepair.repair(json);
+        if (text == null || text.isEmpty()) return false;
         if (!text.startsWith("{")) return false;
         try {
             JSONObject root = new JSONObject(text);

@@ -47,6 +47,7 @@ import com.vrcdevicecheck.osc.priv.ShellResult;
 import com.vrcdevicecheck.osc.priv.ShizukuShell;
 import com.vrcdevicecheck.osc.service.ReporterService;
 import com.vrcdevicecheck.osc.theme.ThemeManager;
+import com.vrcdevicecheck.osc.update.UpdateChecker;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -68,6 +69,10 @@ public class MainActivity extends Activity implements ReporterService.Listener {
     /** API 33 才有通知运行时权限；compileSdk 30 里没有这个常量，所以用字面量 */
     private static final String PERMISSION_POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS";
     private static final int REQUEST_CODE_NOTIFICATION = 33;
+
+    /** 每个进程只做一次启动更新检查 */
+    private static boolean autoUpdateChecked;
+
     private AppSettings settings;
     private DeviceInfoRepository repository;
     private final Handler main = new Handler(Looper.getMainLooper());
@@ -138,6 +143,70 @@ public class MainActivity extends Activity implements ReporterService.Listener {
 
         // 放在所有控件都创建完之后，动态生成的勾选框也能一起套上主题
         ThemeManager.apply(this);
+
+        // 启动时静默检查更新（默认关闭，在「软件更新设置」里开）
+        checkUpdateOnLaunch();
+    }
+
+    /**
+     * 启动时的静默更新检查：
+     * 只有用户在「软件更新设置」里打开了开关才会执行；
+     * 检查失败、没有新版本都完全不打扰用户；发现新版本才弹窗。
+     * 每次进程启动最多检查一次（旋转屏幕重建 Activity 不会重复请求）。
+     */
+    private void checkUpdateOnLaunch() {
+        if (autoUpdateChecked) return;
+        if (!settings.isAutoUpdateCheck()) return;
+        autoUpdateChecked = true;
+
+        final String source = settings.getUpdateSource();
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                UpdateChecker.Release release;
+                try {
+                    release = UpdateChecker.fetchLatest(source);
+                } catch (Throwable t) {
+                    return;
+                }
+                if (release == null) return;
+                if (!UpdateChecker.isNewer(release.tag, currentVersionName())) return;
+
+                final UpdateChecker.Release found = release;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showUpdateAvailableDialog(found);
+                    }
+                });
+            }
+        });
+    }
+
+    private void showUpdateAvailableDialog(final UpdateChecker.Release release) {
+        String body = release.body == null ? "" : release.body.trim();
+        if (body.length() > 800) body = body.substring(0, 800) + "…";
+        String message = body.isEmpty() ? "有新版本可用：" + release.tag : body;
+
+        new AlertDialog.Builder(this)
+                .setTitle("发现新版本 " + release.tag)
+                .setMessage(message)
+                .setPositiveButton("去更新", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startActivity(new Intent(MainActivity.this, UpdateSettingsActivity.class));
+                    }
+                })
+                .setNegativeButton("以后再说", null)
+                .show();
+    }
+
+    private String currentVersionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable t) {
+            return "2.0.3 Omega";
+        }
     }
 
     private void bindViews() {
@@ -516,7 +585,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "2.0.1 Omega";
+        String versionName = "2.0.3 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =
