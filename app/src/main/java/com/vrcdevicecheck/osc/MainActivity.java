@@ -516,7 +516,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "2.0.0 Omega";
+        String versionName = "2.0.1 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =

@@ -29,9 +29,9 @@ public final class UpdateChecker {
             "VRCDI-Updater/2.0 (Android; +https://github.com/WanliuStudio/VRCDI)";
 
     private static final String GITHUB_API =
-            "https://api.github.com/repos/WanliuStudio/VRCDI/releases/latest";
+            "https://api.github.com/repos/WanliuStudio/VRCDI/releases";
     private static final String GITEE_API =
-            "https://gitee.com/api/v5/repos/WanliuStudio/VRCDI/releases/latest";
+            "https://gitee.com/api/v5/repos/WanliuStudio/VRCDI/releases";
 
     private UpdateChecker() {
     }
@@ -74,13 +74,43 @@ public final class UpdateChecker {
     }
 
     public static Release fetchLatest(String source) throws Exception {
-        String url = SOURCE_GITEE.equals(source) ? GITEE_API : GITHUB_API;
-        String json = httpGet(url);
-        return parse(json);
+        String base = SOURCE_GITEE.equals(source) ? GITEE_API : GITHUB_API;
+        try {
+            // 正常路径：/releases/latest
+            return parse(httpGet(base + "/latest"));
+        } catch (Exception latestError) {
+            // GitHub 的 /latest 会跳过 draft 和 pre-release：
+            // 如果最新版被勾了「Set as a pre-release」，这里就是 404。
+            // 退回列表接口，取第一个非 draft 的发行版（预发布也算）。
+            Release fromList = fetchFirstFromList(base);
+            if (fromList != null) return fromList;
+            throw new Exception("没有找到可用的发行版（可能被标记为草稿或预发布）："
+                    + latestError.getMessage());
+        }
+    }
+
+    /** GET /releases?per_page=10，取第一个非 draft 的发行版；失败返回 null */
+    private static Release fetchFirstFromList(String base) {
+        try {
+            String json = httpGet(base + "?per_page=10");
+            JSONArray array = new JSONArray(json);
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.optJSONObject(i);
+                if (obj == null) continue;
+                if (obj.optBoolean("draft", false)) continue;
+                return parseObject(obj);
+            }
+        } catch (Throwable ignored) {
+            // 列表也拿不到就交给上层报错
+        }
+        return null;
     }
 
     static Release parse(String json) throws Exception {
-        JSONObject root = new JSONObject(json);
+        return parseObject(new JSONObject(json));
+    }
+
+    private static Release parseObject(JSONObject root) {
         List<Asset> list = new ArrayList<>();
         JSONArray assets = root.optJSONArray("assets");
         if (assets != null) {

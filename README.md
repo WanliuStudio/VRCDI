@@ -5,7 +5,7 @@
 VRCDI 是一个纯 Java 的 Android 小工具：通过 **Shizuku**（或 Root，或完全无特权）读取设备的 CPU / GPU / 内存 / 电量等信息，按你勾选的字段拼成一行文本，用 **UDP OSC** 的 `/chatbox/input` 发送给 VRChat，显示在聊天框（Chatbox）里。
 
 - 包名：`com.vrcdevicecheck.osc`
-- 当前版本：`2.0.0 Omega (Build 100)`
+- 当前版本：`2.0.1 Omega (Build 101)`
 - 最低系统：Android 10（API 29）
 - 语言：Java 8；唯一的第三方依赖是 Shizuku
 - 构建：Android Studio 4.2 / AGP 4.2.2 / Gradle 6.7.1 / compileSdk 30
