@@ -64,6 +64,11 @@
             android:label="应用表设置" />
 
         <activity
+            android:name=".CpuMapSettingsActivity"
+            android:exported="false"
+            android:label="CPU 映射表设置" />
+
+        <activity
             android:name=".ThemeSettingsActivity"
             android:exported="false"
             android:label="主题" />

@@ -241,29 +241,45 @@ public final class SnapshotMapper {
     }
 
     public static String cpuName(RawFacts facts, JavaSideInfo java) {
-        String name = firstNonBlank(
+        String[] candidates = new String[]{
                 facts.props.get("ro.soc.model"),
+                facts.kv.get("soc.machine"),
                 java == null ? null : java.socModel,
                 facts.props.get("ro.board.platform"),
                 facts.props.get("ro.hardware"),
-                java == null ? null : java.hardware);
-        if (name == null) return null;
-        // Build.HARDWARE / ro.hardware 在高通机型上只会给 "qcom"，给用户看没有意义
-        if ("qcom".equalsIgnoreCase(name)) name = "Qualcomm";
-        else if ("mtk".equalsIgnoreCase(name)) name = "MediaTek";
+                java == null ? null : java.hardware
+        };
 
-        // 型号前面补上厂商，例如 Unisoc T760 / Qualcomm SM8550
+        // 先看映射表：高通的 ro.board.platform 往往只是代号（kona / taro / kalama）
+        String name = null;
+        for (String candidate : candidates) {
+            if (candidate == null || candidate.trim().isEmpty()) continue;
+            String mapped = CpuNames.lookup(candidate);
+            if (mapped != null && !mapped.isEmpty()) {
+                name = mapped;
+                break;
+            }
+        }
+        if (name == null) {
+            name = firstNonBlank(candidates);
+            if (name == null) return null;
+            // Build.HARDWARE / ro.hardware 在高通机型上只会给 "qcom"
+            if ("qcom".equalsIgnoreCase(name)) name = "Qualcomm";
+            else if ("mtk".equalsIgnoreCase(name)) name = "MediaTek";
+        }
+
         String vendor = firstNonBlank(
                 facts.props.get("ro.soc.manufacturer"),
                 java == null ? null : java.socManufacturer);
-        if (vendor != null) {
-            String lowerName = name.toLowerCase(Locale.US);
-            String lowerVendor = vendor.toLowerCase(Locale.US);
-            if (!lowerName.equals(lowerVendor) && !lowerName.startsWith(lowerVendor + " ")) {
-                return vendor + " " + name;
-            }
+        if (vendor == null && name.toLowerCase(Locale.US).startsWith("snapdragon")) {
+            vendor = "Qualcomm";
         }
-        return name;
+        if (vendor == null) return name;
+
+        String lowerName = name.toLowerCase(Locale.US);
+        String lowerVendor = vendor.toLowerCase(Locale.US);
+        if (lowerName.equals(lowerVendor) || lowerName.startsWith(lowerVendor + " ")) return name;
+        return vendor + " " + name;
     }
 
     public static String brand(RawFacts facts, JavaSideInfo java) {
@@ -338,7 +354,41 @@ public final class SnapshotMapper {
                 facts.uid,
                 new ArrayList<>(facts.rootPaths),
                 source,
-                foregroundApp);
+                foregroundApp,
+                vrchatFps(facts.kv));
+    }
+
+    /**
+     * VRChat 帧率：脚本用 dumpsys SurfaceFlinger --latency 取到一串 present 时间戳（纳秒），
+     * 这里用 (帧数-1)/(最后一帧-第一帧) 算出平均 FPS。
+     */
+    public static Float vrchatFps(Map<String, String> kv) {
+        if (kv == null) return null;
+        String raw = kv.get("vrchat.frames");
+        if (raw == null || raw.trim().isEmpty()) return null;
+        long first = -1L;
+        long last = -1L;
+        int count = 0;
+        for (String part : raw.split(";")) {
+            String text = part.trim();
+            if (text.isEmpty()) continue;
+            long value;
+            try {
+                value = Long.parseLong(text);
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            if (value <= 0) continue;
+            if (first < 0) first = value;
+            last = value;
+            count++;
+        }
+        if (count < 2 || last <= first) return null;
+        double seconds = (last - first) / 1_000_000_000d;
+        if (seconds <= 0) return null;
+        float fps = (float) ((count - 1) / seconds);
+        if (fps < 1f || fps > 240f) return null;
+        return fps;
     }
 
     private static Long parseLong(Map<String, String> kv, String key) {

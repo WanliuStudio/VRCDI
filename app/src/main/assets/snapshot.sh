@@ -110,6 +110,22 @@ r gpu.ged.util /d/ged/hal/gpu_utilization
 r gpu.mali.gpuinfo /sys/class/misc/mali0/device/gpuinfo
 r gpu.mtk.model /sys/kernel/gpu/gpu_model
 
+# ---------- SoC 型号兜底（高通 soc0 / 联发科）----------
+r soc.machine /sys/devices/soc0/machine
+r soc.family /sys/devices/soc0/family
+r soc.platform /sys/devices/system/soc/soc0/machine
+
+# ---------- VRChat 帧率（需要 dumpsys，仅 Shizuku/Root 通道可用）----------
+# SurfaceFlinger --latency 的第 2~130 行是每帧的 present 时间戳（纳秒），
+# 取第二列（实际显示时间）交给 Java 侧算平均 FPS。
+for vpkg in com.vrchat.mobile.playstore com.vrchat.oculus.quest; do
+    vlayer=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "$vpkg" | head -n 1)
+    [ -n "$vlayer" ] || continue
+    vframes=$(dumpsys SurfaceFlinger --latency "$vlayer" 2>/dev/null | sed -n '2,130p' | awk '$2 > 0 { printf "%s;", $2 }')
+    if [ -n "$vframes" ]; then printf 'vrchat.frames|%s\n' "$vframes"; fi
+    break
+done
+
 # ---------- root 环境探测 ----------
 printf 'root.uid|%s\n' "$(id -u 2>/dev/null | tr -dc '0-9')"
 for p in /data/adb/ksu /data/adb/ksud /data/adb/ap /data/adb/apd /data/adb/magisk /data/adb/magisk.db /sbin/.magisk; do

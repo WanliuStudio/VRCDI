@@ -283,7 +283,7 @@ public class UpdateSettingsActivity extends Activity {
             PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
             return info.versionName;
         } catch (Throwable t) {
-            return "2.0.3 Omega";
+            return "2.3.5 Omega";
         }
     }
 

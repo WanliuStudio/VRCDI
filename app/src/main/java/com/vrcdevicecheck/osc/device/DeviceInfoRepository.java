@@ -48,6 +48,7 @@ public class DeviceInfoRepository {
     public DeviceInfoRepository(Context context) {
         this.context = context.getApplicationContext();
         this.modelTable = DeviceModelTables.load(this.context);
+        CpuNames.init(this.context);
         this.script = SnapshotScript.get(this.context);
     }
 

@@ -38,6 +38,8 @@ public class DeviceSnapshot {
     public final String source;
     /** 采集那一刻的前台应用名；没有「使用情况访问」权限时为 null（界面显示"不可用"） */
     public final String foregroundApp;
+    /** VRChat 当前帧率，读不到为 null */
+    public final Float vrchatFps;
 
     public DeviceSnapshot(String brand, String model, String seriesName,
                           String cpuName, Integer cpuFreqMHz, Float cpuTempC, Float cpuUsagePct,
@@ -50,7 +52,7 @@ public class DeviceSnapshot {
                 gpuName, gpuFreqMHz, gpuTempC, gpuUsagePct,
                 ramUsedMb, ramTotalMb,
                 batteryPct, charging,
-                uid, rootPaths, source, null);
+                uid, rootPaths, source, null, null);
     }
 
     public DeviceSnapshot(String brand, String model, String seriesName,
@@ -60,6 +62,21 @@ public class DeviceSnapshot {
                           Integer batteryPct, boolean charging,
                           Integer uid, List<String> rootPaths, String source,
                           String foregroundApp) {
+        this(brand, model, seriesName,
+                cpuName, cpuFreqMHz, cpuTempC, cpuUsagePct,
+                gpuName, gpuFreqMHz, gpuTempC, gpuUsagePct,
+                ramUsedMb, ramTotalMb,
+                batteryPct, charging,
+                uid, rootPaths, source, foregroundApp, null);
+    }
+
+    public DeviceSnapshot(String brand, String model, String seriesName,
+                          String cpuName, Integer cpuFreqMHz, Float cpuTempC, Float cpuUsagePct,
+                          String gpuName, Integer gpuFreqMHz, Float gpuTempC, Float gpuUsagePct,
+                          Long ramUsedMb, Long ramTotalMb,
+                          Integer batteryPct, boolean charging,
+                          Integer uid, List<String> rootPaths, String source,
+                          String foregroundApp, Float vrchatFps) {
         this.brand = brand;
         this.model = model;
         this.seriesName = seriesName;
@@ -79,6 +96,7 @@ public class DeviceSnapshot {
         this.rootPaths = rootPaths == null ? Collections.<String>emptyList() : rootPaths;
         this.source = source;
         this.foregroundApp = foregroundApp;
+        this.vrchatFps = vrchatFps;
     }
 
     public boolean hasPrivilegedData() {

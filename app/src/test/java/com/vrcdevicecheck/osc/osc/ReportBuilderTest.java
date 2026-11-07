@@ -83,8 +83,8 @@ public class ReportBuilderTest {
         assertFalse(report.dropped.isEmpty());
         // 第一行永远保留
         assertTrue(report.included.contains(ReportField.BRAND));
-        // 最后一段（前台应用）最先被整段丢掉
-        assertTrue(report.dropped.contains(ReportField.FOREGROUND_APP));
+        // 最后一段（VRChat 帧率）最先被整段丢掉
+        assertTrue(report.dropped.contains(ReportField.VRCHAT_FPS));
         assertTrue(report.overLimit());
         assertTrue(report.limitHint().contains("省略"));
     }

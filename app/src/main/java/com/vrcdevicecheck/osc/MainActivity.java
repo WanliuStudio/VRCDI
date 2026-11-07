@@ -38,6 +38,7 @@ import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceInfoRepository;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
 import com.vrcdevicecheck.osc.device.ForegroundApp;
+import com.vrcdevicecheck.osc.net.LanScanner;
 import com.vrcdevicecheck.osc.osc.ReportBuilder;
 import com.vrcdevicecheck.osc.priv.PrivilegeController;
 import com.vrcdevicecheck.osc.priv.RootController;
@@ -205,7 +206,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         try {
             return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (Throwable t) {
-            return "2.0.3 Omega";
+            return "2.3.5 Omega";
         }
     }
 
@@ -518,6 +519,93 @@ public class MainActivity extends Activity implements ReporterService.Listener {
                 openUsageAccessSettings();
             }
         });
+
+        findViewById(R.id.btn_scan_vrchat).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                scanForVrchat();
+            }
+        });
+    }
+
+    // ---------------- 局域网扫描：找 9000 端口的 VRChat ----------------
+
+    private boolean scanning;
+
+    private void scanForVrchat() {
+        if (scanning) return;
+        scanning = true;
+        toast("正在扫描局域网 9000 端口，请稍候…");
+
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                List<String> found;
+                try {
+                    found = LanScanner.scan(null);
+                } catch (Throwable t) {
+                    found = new ArrayList<>();
+                }
+                final List<String> result = found;
+                main.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        scanning = false;
+                        showScanResult(result);
+                    }
+                });
+            }
+        });
+    }
+
+    private void showScanResult(List<String> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            toast("没有扫描到 9000 端口，确认手机和电脑在同一 Wi-Fi，且 VRChat 用了 --osc 参数");
+            return;
+        }
+        if (candidates.size() == 1) {
+            confirmConnect(candidates.get(0));
+            return;
+        }
+        final String[] items = candidates.toArray(new String[0]);
+        new AlertDialog.Builder(this)
+                .setTitle("扫描到这些设备")
+                .setItems(items, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        confirmConnect(items[which]);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void confirmConnect(final String ip) {
+        new AlertDialog.Builder(this)
+                .setTitle("连接 VRChat")
+                .setMessage("在 " + ip + ":9000 发现可能运行 VRChat 的电脑，是否连接并开始上报？")
+                .setPositiveButton("连接", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        connectTo(ip);
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void connectTo(String ip) {
+        settings.setLocalTarget(false);
+        settings.setTargetIp(ip);
+        settings.setTargetPort(9000);
+        applySettingsToViews();
+        refreshLaunchArg();
+        if (ReporterService.isRunning()) {
+            ReporterService.sendNow(this);
+        } else {
+            ReporterService.start(this);
+        }
+        toast("已连接 " + ip + "，开始上报");
     }
 
     // ---------------- 菜单：设置 ----------------
@@ -585,7 +673,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "2.0.3 Omega";
+        String versionName = "2.3.5 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =

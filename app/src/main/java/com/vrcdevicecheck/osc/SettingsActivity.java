@@ -37,9 +37,11 @@ public class SettingsActivity extends Activity {
             "权限申请方式",
             "设备表设置",
             "应用表设置",
+            "CPU 映射表设置",
             "主题",
             "软件更新设置",
-            "关于VRCDI"
+            "关于VRCDI",
+            "退出"
     };
 
     private AppSettings settings;
@@ -78,13 +80,19 @@ public class SettingsActivity extends Activity {
                         startActivity(new Intent(SettingsActivity.this, AppTableSettingsActivity.class));
                         break;
                     case 3:
-                        startActivity(new Intent(SettingsActivity.this, ThemeSettingsActivity.class));
+                        startActivity(new Intent(SettingsActivity.this, CpuMapSettingsActivity.class));
                         break;
                     case 4:
+                        startActivity(new Intent(SettingsActivity.this, ThemeSettingsActivity.class));
+                        break;
+                    case 5:
                         startActivity(new Intent(SettingsActivity.this, UpdateSettingsActivity.class));
                         break;
-                    default:
+                    case 6:
                         showAboutDialog();
+                        break;
+                    default:
+                        confirmExit();
                         break;
                 }
             }
@@ -175,6 +183,37 @@ public class SettingsActivity extends Activity {
         ShizukuShell.requestPermission();
     }
 
+    /** 退出：确认后停止上报服务并结束进程 */
+    private void confirmExit() {
+        new AlertDialog.Builder(this)
+                .setTitle("退出")
+                .setMessage("确定要退出 VRCDI 吗？\n退出后上报会停止，后台服务也会一并关闭。")
+                .setPositiveButton("退出", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        exitApp();
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void exitApp() {
+        try {
+            startService(new Intent(this, ReporterService.class).setAction(ReporterService.ACTION_STOP));
+        } catch (Throwable ignored) {
+            // 服务没在跑就算了
+        }
+        try {
+            stopService(new Intent(this, ReporterService.class));
+        } catch (Throwable ignored) {
+            // 忽略
+        }
+        finishAffinity();
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(0);
+    }
+
     private void showAboutDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_about, null);
         TextView device = view.findViewById(R.id.text_about_device);
@@ -197,7 +236,7 @@ public class SettingsActivity extends Activity {
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "2.0.3 Omega";
+        String versionName = "2.3.5 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =
