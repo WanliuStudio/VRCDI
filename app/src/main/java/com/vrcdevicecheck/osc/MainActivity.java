@@ -206,7 +206,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         try {
             return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (Throwable t) {
-            return "2.3.5 Omega";
+            return "2.3.8 Omega";
         }
     }
 
@@ -542,7 +542,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
             public void run() {
                 List<String> found;
                 try {
-                    found = LanScanner.scan(null);
+                    found = LanScanner.scan(MainActivity.this, null);
                 } catch (Throwable t) {
                     found = new ArrayList<>();
                 }
@@ -560,7 +560,8 @@ public class MainActivity extends Activity implements ReporterService.Listener {
 
     private void showScanResult(List<String> candidates) {
         if (candidates == null || candidates.isEmpty()) {
-            toast("没有扫描到 9000 端口，确认手机和电脑在同一 Wi-Fi，且 VRChat 用了 --osc 参数");
+            toast("没有找到开启 OSC 的 VRChat：确认电脑和手机在同一 Wi-Fi、VRChat 已开启 OSC、"
+                    + "PC 防火墙放行 9000；也可以手动选「自定义...」填电脑 IP");
             return;
         }
         if (candidates.size() == 1) {
@@ -673,7 +674,7 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         sb.append("安卓API版本：API").append(Build.VERSION.SDK_INT);
         device.setText(sb.toString());
 
-        String versionName = "2.3.5 Omega";
+        String versionName = "2.3.8 Omega";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =
@@ -842,6 +843,12 @@ public class MainActivity extends Activity implements ReporterService.Listener {
         textPreview.setText(report.text);
         textPreviewCount.setText(report.charCount() + "/" + ReportBuilder.CHATBOX_LIMIT);
         String hint = report.limitHint();
+        if (settings.getEnabledFields().contains(ReportField.VRCHAT_FPS)
+                && report.text.contains("FPS: 不可用")) {
+            String extra = "帧率需要 VRChat 在前台时采集，并且使用 Shizuku / Root 通道；"
+                    + "在本应用界面点「重新采集」时 VRChat 不在前台，读不到是正常的。";
+            hint = hint == null ? extra : hint + "\n" + extra;
+        }
         if (hint == null) {
             textPreviewHint.setVisibility(View.GONE);
         } else {

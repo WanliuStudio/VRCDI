@@ -22,7 +22,7 @@ public enum ReportField {
     RAM("ram", "RAM 占用/总量"),
     BATTERY("battery", "电量与充电状态"),
     FOREGROUND_APP("foreground_app", "前台应用"),
-    VRCHAT_FPS("vrchat_fps", "VRChat 帧率");
+    VRCHAT_FPS("vrchat_fps", "帧率");
 
     public final String key;
     public final String label;

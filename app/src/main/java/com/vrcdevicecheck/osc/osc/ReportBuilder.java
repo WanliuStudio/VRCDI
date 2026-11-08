@@ -215,14 +215,14 @@ public final class ReportBuilder {
             lines.add(new Line("App: " + orNa(snapshot.foregroundApp), appFields));
         }
 
-        // VRChat 帧率行
+        // 帧率行
         if (fields.contains(ReportField.VRCHAT_FPS)) {
             List<ReportField> fpsFields = new ArrayList<>(1);
             fpsFields.add(ReportField.VRCHAT_FPS);
             String fps = snapshot.vrchatFps == null
                     ? NA
-                    : String.format(Locale.US, "%.0f FPS", snapshot.vrchatFps);
-            lines.add(new Line("VRChat: " + fps, fpsFields));
+                    : String.format(Locale.US, "%.0f", snapshot.vrchatFps);
+            lines.add(new Line("FPS: " + fps, fpsFields));
         }
 
         return lines;

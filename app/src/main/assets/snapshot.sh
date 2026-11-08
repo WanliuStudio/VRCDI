@@ -19,25 +19,43 @@ g() {
     printf '\n'
 }
 
+# 直接以完整属性名作为 key：Java 侧把 "prop.xxx" 的 xxx 放进 props，
+# 这样 props.get("ro.board.platform") 才能取到值。
+gp() {
+    printf 'prop.%s|' "$1"
+    getprop "$1" 2>/dev/null | tr -d '\r\n'
+    printf '\n'
+}
+
 echo "@BEGIN"
 
 # ---------- 设备与 SoC 标识 ----------
-g prop.soc.model ro.soc.model
-g prop.soc.manufacturer ro.soc.manufacturer
-g prop.board.platform ro.board.platform
-g prop.hardware ro.hardware
-g prop.hardware.egl ro.hardware.egl
-g prop.model ro.product.model
-g prop.brand ro.product.brand
-g prop.manufacturer ro.product.manufacturer
-g prop.device ro.product.device
+gp ro.soc.model
+gp ro.soc.manufacturer
+gp ro.board.platform
+gp ro.product.board
+gp ro.boot.hardware
+gp ro.hardware
+gp ro.hardware.egl
+gp ro.product.model
+gp ro.product.brand
+gp ro.product.manufacturer
+gp ro.product.device
 # 厂商市场名（各厂商属性名不同，能读到哪个用哪个）
-g prop.marketname ro.product.marketname
-g prop.vendor.marketname ro.product.vendor.marketname
-g prop.odm.marketname ro.product.odm.marketname
-g prop.oppo.marketname ro.product.oppo.marketname
-g prop.vivo.marketname ro.product.vivo.marketname
-g prop.marketing_name ro.config.marketing_name
+gp ro.product.marketname
+gp ro.product.vendor.marketname
+gp ro.product.odm.marketname
+gp ro.product.oppo.marketname
+gp ro.product.vivo.marketname
+gp ro.config.marketing_name
+
+# /proc/cpuinfo 的 Hardware 行：老内核上的高通机型经常只有这里带型号
+if [ -r /proc/cpuinfo ]; then
+    awk -F: '/^[Hh]ardware/ { gsub(/^[ \t]+|[ \t]+$/, "", $2); if ($2 != "") print "cpuinfo.hardware|" $2 }' /proc/cpuinfo 2>/dev/null
+fi
+
+# 设备树里的 model：部分高通机型会写 "Qualcomm Technologies, Inc. SM8250"
+r soc.dt.model /proc/device-tree/model
 
 # ---------- CPU 使用率原始计数（两次采样做差）----------
 printf 'stat.cpu|'
@@ -115,16 +133,27 @@ r soc.machine /sys/devices/soc0/machine
 r soc.family /sys/devices/soc0/family
 r soc.platform /sys/devices/system/soc/soc0/machine
 
-# ---------- VRChat 帧率（需要 dumpsys，仅 Shizuku/Root 通道可用）----------
+# ---------- 帧率（VRChat，需要 dumpsys，仅 Shizuku/Root 通道可用）----------
 # SurfaceFlinger --latency 的第 2~130 行是每帧的 present 时间戳（纳秒），
 # 取第二列（实际显示时间）交给 Java 侧算平均 FPS。
-for vpkg in com.vrchat.mobile.playstore com.vrchat.oculus.quest; do
-    vlayer=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "$vpkg" | head -n 1)
-    [ -n "$vlayer" ] || continue
-    vframes=$(dumpsys SurfaceFlinger --latency "$vlayer" 2>/dev/null | sed -n '2,130p' | awk '$2 > 0 { printf "%s;", $2 }')
-    if [ -n "$vframes" ]; then printf 'vrchat.frames|%s\n' "$vframes"; fi
-    break
-done
+# 图层名在不同机型/版本上可能是 "SurfaceView[包名/Activity]" 也可能只带 "VRChat"，
+# 所以依次按两个包名、再按 vrchat 关键字找，并且多试几个匹配到的图层。
+fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "com.vrchat.mobile.playstore")
+[ -n "$fps_layers" ] || fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "com.vrchat.oculus.quest")
+[ -n "$fps_layers" ] || fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "vrchat")
+
+if [ -n "$fps_layers" ]; then
+    echo "$fps_layers" | head -n 4 | while IFS= read -r vlayer; do
+        vlayer=$(printf '%s' "$vlayer" | sed 's/[[:space:]]*$//')
+        [ -n "$vlayer" ] || continue
+        vframes=$(dumpsys SurfaceFlinger --latency "$vlayer" 2>/dev/null | sed -n '2,130p' | awk '$2 > 0 { printf "%s;", $2 }')
+        if [ -n "$vframes" ]; then
+            printf 'fps.layer|%s\n' "$vlayer"
+            printf 'vrchat.frames|%s\n' "$vframes"
+            break
+        fi
+    done
+fi
 
 # ---------- root 环境探测 ----------
 printf 'root.uid|%s\n' "$(id -u 2>/dev/null | tr -dc '0-9')"

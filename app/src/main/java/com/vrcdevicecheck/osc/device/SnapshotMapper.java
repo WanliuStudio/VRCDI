@@ -245,41 +245,102 @@ public final class SnapshotMapper {
                 facts.props.get("ro.soc.model"),
                 facts.kv.get("soc.machine"),
                 java == null ? null : java.socModel,
+                facts.props.get("ro.product.board"),
                 facts.props.get("ro.board.platform"),
+                facts.kv.get("soc.platform"),
+                facts.kv.get("cpuinfo.hardware"),
+                facts.kv.get("soc.dt.model"),
                 facts.props.get("ro.hardware"),
                 java == null ? null : java.hardware
         };
 
-        // 先看映射表：高通的 ro.board.platform 往往只是代号（kona / taro / kalama）
+        // 映射表优先：高通的 ro.board.platform / ro.product.board 往往只是代号（kona / taro / kalama），
+        // 而 soc0/machine、cpuinfo、device-tree 里可能出现 "Qualcomm Technologies, Inc. SM8250"，
+        // 统一清洗成代号再查表，就能得到具体型号。
         String name = null;
-        for (String candidate : candidates) {
-            if (candidate == null || candidate.trim().isEmpty()) continue;
-            String mapped = CpuNames.lookup(candidate);
-            if (mapped != null && !mapped.isEmpty()) {
+        for (String raw : candidates) {
+            String cleaned = cleanSoCName(raw);
+            if (cleaned == null) continue;
+            String mapped = lookupCpu(cleaned);
+            if (mapped != null && !isGenericCpuName(mapped)) {
                 name = mapped;
                 break;
             }
         }
         if (name == null) {
-            name = firstNonBlank(candidates);
-            if (name == null) return null;
-            // Build.HARDWARE / ro.hardware 在高通机型上只会给 "qcom"
-            if ("qcom".equalsIgnoreCase(name)) name = "Qualcomm";
-            else if ("mtk".equalsIgnoreCase(name)) name = "MediaTek";
+            String fallback = null;
+            for (String raw : candidates) {
+                String cleaned = cleanSoCName(raw);
+                if (cleaned == null) continue;
+                String value = cleaned;
+                if ("qcom".equalsIgnoreCase(value)) value = "Qualcomm";
+                else if ("mtk".equalsIgnoreCase(value)) value = "MediaTek";
+                if (fallback == null) fallback = value;
+                if (!isGenericCpuName(value)) {
+                    fallback = value;
+                    break;
+                }
+            }
+            name = fallback;
         }
+        if (name == null) return null;
 
         String vendor = firstNonBlank(
                 facts.props.get("ro.soc.manufacturer"),
                 java == null ? null : java.socManufacturer);
-        if (vendor == null && name.toLowerCase(Locale.US).startsWith("snapdragon")) {
-            vendor = "Qualcomm";
+        String lowerName = name.toLowerCase(Locale.US);
+        if (vendor == null) {
+            if (lowerName.startsWith("snapdragon")) vendor = "Qualcomm";
+            else if (lowerName.startsWith("dimensity") || lowerName.startsWith("helio")) vendor = "MediaTek";
         }
         if (vendor == null) return name;
 
-        String lowerName = name.toLowerCase(Locale.US);
         String lowerVendor = vendor.toLowerCase(Locale.US);
         if (lowerName.equals(lowerVendor) || lowerName.startsWith(lowerVendor + " ")) return name;
         return vendor + " " + name;
+    }
+
+    /** 只给了厂商名（Qualcomm / MediaTek）时不算有效型号，继续找下一个候选 */
+    private static boolean isGenericCpuName(String name) {
+        if (name == null) return true;
+        String value = name.trim().toLowerCase(Locale.US);
+        return value.isEmpty()
+                || value.equals("qualcomm")
+                || value.equals("qcom")
+                || value.equals("mediatek")
+                || value.equals("mtk")
+                || value.equals("unknown")
+                || value.equals("samsung")
+                || value.equals("exynos");
+    }
+
+    /** "Qualcomm Technologies, Inc. SM8250" -> "SM8250"；其他原样返回 */
+    private static String cleanSoCName(String raw) {
+        if (raw == null) return null;
+        String value = raw.trim();
+        if (value.isEmpty()) return null;
+        if (value.startsWith("Qualcomm Technologies")) {
+            String tail = lastToken(value);
+            if (tail != null && !tail.isEmpty()) return tail;
+        }
+        return value;
+    }
+
+    private static String lookupCpu(String value) {
+        String mapped = CpuNames.lookup(value);
+        if (mapped == null) {
+            String tail = lastToken(value);
+            if (tail != null && !tail.equalsIgnoreCase(value)) mapped = CpuNames.lookup(tail);
+        }
+        return mapped;
+    }
+
+    private static String lastToken(String text) {
+        if (text == null) return null;
+        String value = text.trim();
+        int index = value.lastIndexOf(' ');
+        if (index < 0 || index == value.length() - 1) return value;
+        return value.substring(index + 1).trim();
     }
 
     public static String brand(RawFacts facts, JavaSideInfo java) {
