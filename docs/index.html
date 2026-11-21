@@ -23,9 +23,9 @@
   "description": "通过 Shizuku / Root 读取安卓设备的 CPU、GPU、内存、电量与前台应用，用 OSC 发送到 VRChat 的 Chatbox。",
   "applicationCategory": "UtilitiesApplication",
   "operatingSystem": "Android 10+",
-  "softwareVersion": "4.9.0 Release",
+  "softwareVersion": "5.1.0 Beta2",
   "url": "https://wanliustudio.github.io/VRCDI/",
-  "downloadUrl": "https://github.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk",
+  "downloadUrl": "https://github.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/VRCDI-5.1.0-beta2.apk",
   "codeRepository": "https://github.com/WanliuStudio/VRCDI",
   "sameAs": [
     "https://github.com/WanliuStudio/VRCDI",
@@ -389,14 +389,14 @@
       <span>Android 10+</span>
       <span>纯 Java · 无 AndroidX 界面</span>
       <span>Shizuku / Root / 免授权</span>
-      <span id="badge-version">4.9.0 Release (Build 420)</span>
+      <span id="badge-version">5.1.0 Beta2 (Build 431)</span>
     </div>
 
     <div class="actions">
-      <a class="btn primary" id="dl-gitee" href="https://gitee.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk" target="_blank" rel="noopener">
+      <a class="btn primary" id="dl-gitee" href="https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/VRCDI-5.1.0-beta2.apk" target="_blank" rel="noopener">
         国内下载 <small>Gitee</small>
       </a>
-      <a class="btn" id="dl-github" href="https://github.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk" target="_blank" rel="noopener">
+      <a class="btn" id="dl-github" href="https://github.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/VRCDI-5.1.0-beta2.apk" target="_blank" rel="noopener">
         GitHub 下载 <small>Releases</small>
       </a>
     </div>
@@ -505,9 +505,10 @@
     </div>
 
     <div class="notice" style="margin-top:18px;">
-      <strong>下载提示：</strong>4.9.0 起使用发布私钥签名；开发者验证（ADV）需要在手机厂商开放平台完成注册后由平台自动提交，目前尚未完成，
+      <strong>下载提示：</strong>当前为 <strong>5.1.0 Beta2 测试版</strong>，使用发布私钥签名；
+      4.9.0 及之后的版本可直接覆盖升级，4.4.4 Beta 及更早的 debug 签名版本需要<strong>先卸载再安装</strong>。
+      开发者验证（ADV）需要在手机厂商开放平台完成注册后由平台自动提交，目前尚未完成，
       部分设备安装时可能提示「未验证开发者」，可手动确认继续安装。
-      4.4.4 Beta 及更早的 debug 签名版本需要<strong>先卸载再安装</strong>，否则会提示签名冲突。
       安装前请确认系统为 Android 10（API 29）及以上。
     </div>
   </section>
@@ -555,16 +556,16 @@
    *
    * 1. giteeDownload / githubDownload 换成真实的「附件直链」。
    *    GitHub：Releases → 右键 APK → 复制链接，形如
-   *            https://github.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/文件名.apk
+   *            https://github.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/文件名.apk
    *    Gitee ：发行版 → 右键附件 → 复制链接，形如
-   *            https://gitee.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/文件名.apk
+   *            https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/文件名.apk
    * 2. sha256 换成你上传的那个 APK 的哈希（重新构建后要重新算）。
    */
   const CONFIG = {
-    version: '4.9.0 Release (Build 420)',
-    sha256: '1c3a8558cb81ce1cc8b1a305a5c5fa50957ef13e1b216e46202e564d30413ed3',
-    giteeDownload: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk',
-    githubDownload: 'https://github.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk',
+    version: '5.1.0 Beta2 (Build 431)',
+    sha256: '6530a36e0f17ce30464e4079026b1945d0cfc1a40a3be1e20f4a6b2f9601a25d',
+    giteeDownload: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/VRCDI-5.1.0-beta2.apk',
+    githubDownload: 'https://github.com/WanliuStudio/VRCDI/releases/download/5.1.0-Beta2/VRCDI-5.1.0-beta2.apk',
     giteeRepo: 'https://gitee.com/WanliuStudio/VRCDI',
     githubRepo: 'https://github.com/WanliuStudio/VRCDI',
     releases: 'https://github.com/WanliuStudio/VRCDI/releases'
