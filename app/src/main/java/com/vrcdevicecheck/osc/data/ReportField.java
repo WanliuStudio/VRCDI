@@ -27,6 +27,7 @@ public enum ReportField {
     GPU_USAGE("gpu_usage", R.string.field_gpu_usage),
     RAM("ram", R.string.field_ram),
     BATTERY("battery", R.string.field_battery),
+    HEART_RATE("heart_rate", R.string.field_heart_rate),
     WEATHER("weather", R.string.field_weather),
     TEMPERATURE("temperature", R.string.field_temperature),
     HUMIDITY("humidity", R.string.field_humidity),
@@ -34,6 +35,11 @@ public enum ReportField {
     WIND("wind", R.string.field_wind),
     UV("uv", R.string.field_uv),
     SUNSET("sunset", R.string.field_sunset),
+    MUSIC_TITLE("music_title", R.string.field_music_title),
+    MUSIC_ARTIST("music_artist", R.string.field_music_artist),
+    MUSIC_ALBUM("music_album", R.string.field_music_album),
+    MUSIC_PROGRESS("music_progress", R.string.field_music_progress),
+    MUSIC_LYRIC("music_lyric", R.string.field_music_lyric),
     FOREGROUND_APP("foreground_app", R.string.field_foreground_app),
     VRCHAT_FPS("vrchat_fps", R.string.field_vrchat_fps);
 
@@ -62,5 +68,17 @@ public enum ReportField {
     public boolean isWeather() {
         return this == WEATHER || this == TEMPERATURE || this == HUMIDITY
                 || this == PRESSURE || this == WIND || this == UV || this == SUNSET;
+    }
+
+    /** 音乐类字段需要「通知使用权」，且共用歌曲行 / 歌词行 */
+    public boolean isMusic() {
+        return this == MUSIC_TITLE || this == MUSIC_ARTIST
+                || this == MUSIC_ALBUM || this == MUSIC_PROGRESS
+                || this == MUSIC_LYRIC;
+    }
+
+    /** 健康类字段需要额外权限 / 外部设备，默认不勾选 */
+    public boolean isHealth() {
+        return this == HEART_RATE;
     }
 }

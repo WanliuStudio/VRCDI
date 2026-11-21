@@ -5,6 +5,7 @@ import android.content.Context;
 import com.vrcdevicecheck.osc.R;
 import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
+import com.vrcdevicecheck.osc.media.MusicInfo;
 import com.vrcdevicecheck.osc.weather.WeatherInfo;
 
 import java.util.ArrayList;
@@ -97,6 +98,7 @@ public final class ReportBuilder {
     private static final class Words {
         final String na;
         final String battery;
+        final String heartRate;
         final String weather;
         final String pressure;
         final String wind;
@@ -108,11 +110,12 @@ public final class ReportBuilder {
         final String tempFormat;
         final String[] directions;
 
-        Words(String na, String battery, String weather, String pressure, String wind,
-              String uv, String sunset, String speedOnly, String charging, String humidityFormat,
-              String tempFormat, String[] directions) {
+        Words(String na, String battery, String heartRate, String weather, String pressure,
+              String wind, String uv, String sunset, String speedOnly, String charging,
+              String humidityFormat, String tempFormat, String[] directions) {
             this.na = na;
             this.battery = battery;
+            this.heartRate = heartRate;
             this.weather = weather;
             this.pressure = pressure;
             this.wind = wind;
@@ -127,32 +130,30 @@ public final class ReportBuilder {
     }
 
     private static final Words WORDS_ZH = new Words(
-            "不可用", "电量: ", "天气: ", "气压 ", "风向风速 ", "紫外线 ", "日落 ", "风速 ", "充电中",
-            "湿度 %d%%", "%.1f℃",
+            "不可用", "电量: ", "心率: ", "天气: ", "气压 ", "风向风速 ", "紫外线 ", "日落 ",
+            "风速 ", "充电中", "湿度 %d%%", "%.1f℃",
             new String[]{"北风", "东北风", "东风", "东南风", "南风", "西南风", "西风", "西北风"});
 
     private static final Words WORDS_EN = new Words(
-            "N/A", "Battery: ", "Weather: ", "Pressure ", "Wind ", "UV ", "Sunset ",
-            "Wind ", "Charging",
-            "Humidity %d%%", "%.1fC",
+            "N/A", "Battery: ", "Heart rate: ", "Weather: ", "Pressure ", "Wind ",
+            "UV ", "Sunset ", "Wind ", "Charging", "Humidity %d%%", "%.1fC",
             new String[]{"N wind", "NE wind", "E wind", "SE wind",
                     "S wind", "SW wind", "W wind", "NW wind"});
 
     private static final Words WORDS_JA = new Words(
-            "利用不可", "バッテリー: ", "天気: ", "気圧 ", "風 ", "紫外線 ", "日の入り ",
-            "風速 ", "充電中",
-            "湿度 %d%%", "%.1f℃",
+            "利用不可", "バッテリー: ", "心拍数: ", "天気: ", "気圧 ", "風 ", "紫外線 ",
+            "日の入り ", "風速 ", "充電中", "湿度 %d%%", "%.1f℃",
             new String[]{"北の風", "北東の風", "東の風", "南東の風",
                     "南の風", "南西の風", "西の風", "北西の風"});
 
     private static final Words WORDS_RU = new Words(
-            "Недоступно", "Батарея: ", "Погода: ", "Давление ", "Ветер ", "УФ ", "Закат ",
-            "Скорость ", "Заряжается", "Влажность %d%%", "%.1f°C",
+            "Недоступно", "Батарея: ", "Пульс: ", "Погода: ", "Давление ", "Ветер ",
+            "УФ ", "Закат ", "Скорость ", "Заряжается", "Влажность %d%%", "%.1f°C",
             new String[]{"С", "СВ", "В", "ЮВ", "Ю", "ЮЗ", "З", "СЗ"});
 
     private static final Words WORDS_KO = new Words(
-            "사용 불가", "배터리: ", "날씨: ", "기압 ", "바람 ", "자외선 ", "일몰 ",
-            "풍속 ", "충전 중", "습도 %d%%", "%.1f℃",
+            "사용 불가", "배터리: ", "심박수: ", "날씨: ", "기압 ", "바람 ", "자외선 ",
+            "일몰 ", "풍속 ", "충전 중", "습도 %d%%", "%.1f℃",
             new String[]{"북풍", "북동풍", "동풍", "남동풍",
                     "남풍", "남서풍", "서풍", "북서풍"});
 
@@ -245,6 +246,26 @@ public final class ReportBuilder {
     public static Report build(DeviceSnapshot snapshot, Set<ReportField> fields, boolean asciiOnly,
                                boolean useProductName, WeatherInfo weather, boolean hideUnavailable,
                                String lang) {
+        return build(snapshot, fields, asciiOnly, useProductName, weather, hideUnavailable,
+                lang, null);
+    }
+
+    /**
+     * @param music 当前正在播放的音乐；为 null 时音乐字段按「不可用」处理
+     */
+    public static Report build(DeviceSnapshot snapshot, Set<ReportField> fields, boolean asciiOnly,
+                               boolean useProductName, WeatherInfo weather, boolean hideUnavailable,
+                               String lang, MusicInfo music) {
+        return build(snapshot, fields, asciiOnly, useProductName, weather, hideUnavailable,
+                lang, music, null);
+    }
+
+    /**
+     * @param heartRateBpm 最近一次读到的静息/实时心率；没有数据时传 null
+     */
+    public static Report build(DeviceSnapshot snapshot, Set<ReportField> fields, boolean asciiOnly,
+                               boolean useProductName, WeatherInfo weather, boolean hideUnavailable,
+                               String lang, MusicInfo music, Integer heartRateBpm) {
         List<ReportField> ordered = new ArrayList<>();
         for (ReportField field : ReportField.values()) {
             if (fields != null && fields.contains(field)) ordered.add(field);
@@ -258,7 +279,7 @@ public final class ReportBuilder {
 
         Set<ReportField> hidden = EnumSet.noneOf(ReportField.class);
         List<Line> lines = buildLines(snapshot, ordered, reportLang, words, useProductName,
-                weather, hideUnavailable, hidden);
+                weather, hideUnavailable, asciiOnly, music, heartRateBpm, hidden);
         while (lineText(lines).length() > CHATBOX_LIMIT && lines.size() > 1) {
             lines.remove(lines.size() - 1);
         }
@@ -306,13 +327,23 @@ public final class ReportBuilder {
         Set<ReportField> hidden = EnumSet.noneOf(ReportField.class);
         String reportLang = asciiOnly ? "en" : (lang == null ? "zh" : lang);
         return lineText(buildLines(snapshot, fields, reportLang, wordsFor(reportLang),
-                useProductName, null, false, hidden));
+                useProductName, null, false, asciiOnly, null, null, hidden));
+    }
+
+    /** 是否勾选了任意音乐字段 */
+    public static boolean hasMusicFields(Set<ReportField> fields) {
+        if (fields == null) return false;
+        for (ReportField field : fields) {
+            if (field.isMusic()) return true;
+        }
+        return false;
     }
 
     private static List<Line> buildLines(DeviceSnapshot snapshot, List<ReportField> fields,
                                          String lang, Words words, boolean useProductName,
                                          WeatherInfo weather, boolean hideUnavailable,
-                                         Set<ReportField> hidden) {
+                                         boolean asciiOnly, MusicInfo music,
+                                         Integer heartRateBpm, Set<ReportField> hidden) {
         List<Line> lines = new ArrayList<>(7);
 
         // 第一行：品牌 + 型号（真实型号或产品名称）
@@ -390,6 +421,16 @@ public final class ReportBuilder {
             }
             if (!battery.isEmpty()) {
                 lines.add(new Line(words.battery + battery.text, battery.fields));
+            }
+        }
+
+        // 心率行（手环近 60 秒内有数据才显示）
+        if (fields.contains(ReportField.HEART_RATE)) {
+            LineBuilder heart = new LineBuilder(hidden, hideUnavailable, words);
+            heart.add(ReportField.HEART_RATE,
+                    heartRateBpm == null || heartRateBpm <= 0 ? NA : heartRateBpm + "bpm");
+            if (!heart.isEmpty()) {
+                lines.add(new Line(words.heartRate + heart.text, heart.fields));
             }
         }
 
@@ -494,6 +535,67 @@ public final class ReportBuilder {
             }
         }
 
+        // 音乐行：歌名 - 歌手 (专辑)
+        boolean musicTrackSelected = fields.contains(ReportField.MUSIC_TITLE)
+                || fields.contains(ReportField.MUSIC_ARTIST)
+                || fields.contains(ReportField.MUSIC_ALBUM)
+                || fields.contains(ReportField.MUSIC_PROGRESS);
+        if (musicTrackSelected) {
+            List<ReportField> selected = new ArrayList<>(4);
+            if (fields.contains(ReportField.MUSIC_TITLE)) selected.add(ReportField.MUSIC_TITLE);
+            if (fields.contains(ReportField.MUSIC_ARTIST)) selected.add(ReportField.MUSIC_ARTIST);
+            if (fields.contains(ReportField.MUSIC_ALBUM)) selected.add(ReportField.MUSIC_ALBUM);
+            if (fields.contains(ReportField.MUSIC_PROGRESS)) {
+                selected.add(ReportField.MUSIC_PROGRESS);
+            }
+
+            StringBuilder trackText = new StringBuilder();
+            List<ReportField> used = new ArrayList<>(4);
+            if (music != null) {
+                if (fields.contains(ReportField.MUSIC_TITLE) && music.hasTitle()) {
+                    trackText.append(music.title.trim());
+                    used.add(ReportField.MUSIC_TITLE);
+                }
+                if (fields.contains(ReportField.MUSIC_ARTIST) && music.hasArtist()) {
+                    if (trackText.length() > 0) trackText.append(" - ");
+                    trackText.append(music.artist.trim());
+                    used.add(ReportField.MUSIC_ARTIST);
+                }
+                if (fields.contains(ReportField.MUSIC_ALBUM) && music.hasAlbum()) {
+                    if (trackText.length() > 0) {
+                        trackText.append(" (").append(music.album.trim()).append(')');
+                    } else {
+                        trackText.append(music.album.trim());
+                    }
+                    used.add(ReportField.MUSIC_ALBUM);
+                }
+                if (fields.contains(ReportField.MUSIC_PROGRESS) && music.hasProgress()) {
+                    if (trackText.length() > 0) trackText.append(' ');
+                    trackText.append(formatTime(music.positionMs))
+                            .append(" / ")
+                            .append(formatTime(music.durationMs));
+                    used.add(ReportField.MUSIC_PROGRESS);
+                }
+            }
+            if (trackText.length() > 0) {
+                lines.add(new Line(musicPrefix(asciiOnly) + trackText, used));
+            } else if (hideUnavailable) {
+                hidden.addAll(selected);
+            } else {
+                lines.add(new Line(musicPrefix(asciiOnly) + words.na, selected));
+            }
+        }
+
+        // 当前播放到的歌词行
+        if (fields.contains(ReportField.MUSIC_LYRIC)) {
+            LineBuilder lyric = new LineBuilder(hidden, hideUnavailable, words);
+            lyric.add(ReportField.MUSIC_LYRIC,
+                    music != null && music.hasLyric() ? music.lyricLine.trim() : NA);
+            if (!lyric.isEmpty()) {
+                lines.add(new Line(lyricPrefix(asciiOnly) + lyric.text, lyric.fields));
+            }
+        }
+
         // 前台应用行
         if (fields.contains(ReportField.FOREGROUND_APP)) {
             LineBuilder app = new LineBuilder(hidden, hideUnavailable, words);
@@ -516,6 +618,27 @@ public final class ReportBuilder {
         }
 
         return lines;
+    }
+
+    /** 播放位置 / 总时长：1:20 / 4:20；超过一小时用 1:02:03 */
+    private static String formatTime(long millis) {
+        long totalSeconds = Math.max(0L, millis) / 1000L;
+        long hours = totalSeconds / 3600L;
+        long minutes = (totalSeconds % 3600L) / 60L;
+        long seconds = totalSeconds % 60L;
+        if (hours > 0) {
+            return String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds);
+        }
+        return String.format(Locale.US, "%d:%02d", minutes, seconds);
+    }
+
+    /** 非 ASCII 模式下用音符前缀；「仅发送 ASCII」时退回纯英文标签 */
+    private static String musicPrefix(boolean asciiOnly) {
+        return asciiOnly ? "Music: " : "♪ ";
+    }
+
+    private static String lyricPrefix(boolean asciiOnly) {
+        return asciiOnly ? "Lyric: " : "♪ ";
     }
 
     private static String lineText(List<Line> lines) {

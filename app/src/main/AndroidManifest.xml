@@ -13,6 +13,15 @@
     <!-- 应用内更新：下载完成后交给系统安装器 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- 心率手环：标准 BLE 心率服务（0x180D） -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- 目标 SDK 30，Android 11 及以下/兼容模式下扫描 BLE 仍需要位置权限 -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
     <!-- 检测"当前前台应用"：签名级权限，只能由用户在系统设置里手动授予，代码里会引导跳转 -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
@@ -54,6 +63,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".HeartRateActivity"
+            android:exported="false"
+            android:label="@string/heart_rate_title" />
 
         <activity
             android:name=".SettingsActivity"
@@ -116,6 +130,17 @@
             android:authorities="${applicationId}.apk"
             android:exported="false"
             android:grantUriPermissions="true" />
+
+        <!-- 通知使用权挂载点：只用于读取媒体会话（歌名/歌手/进度），不读取通知内容 -->
+        <service
+            android:name=".media.MediaNotificationListener"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".service.ReporterService"

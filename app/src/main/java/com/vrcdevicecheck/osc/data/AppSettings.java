@@ -398,7 +398,10 @@ public class AppSettings {
         if (stored == null) {
             Set<ReportField> defaults = EnumSet.allOf(ReportField.class);
             for (ReportField field : ReportField.values()) {
-                if (field.isWeather()) defaults.remove(field);
+                // 天气要选城市、音乐要开通知使用权、心率要连手环，都不适合默认勾选
+                if (field.isWeather() || field.isMusic() || field.isHealth()) {
+                    defaults.remove(field);
+                }
             }
             return defaults;
         }

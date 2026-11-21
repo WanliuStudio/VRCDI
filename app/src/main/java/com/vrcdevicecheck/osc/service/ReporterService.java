@@ -19,6 +19,9 @@ import com.vrcdevicecheck.osc.data.ModelDisplayMode;
 import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceInfoRepository;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
+import com.vrcdevicecheck.osc.media.HeartRateManager;
+import com.vrcdevicecheck.osc.media.MusicInfo;
+import com.vrcdevicecheck.osc.media.NowPlayingRepository;
 import com.vrcdevicecheck.osc.osc.OscEncoder;
 import com.vrcdevicecheck.osc.osc.OscSender;
 import com.vrcdevicecheck.osc.osc.ReportBuilder;
@@ -58,6 +61,12 @@ public class ReporterService extends Service {
     private static final String CHANNEL_ID = "vrcdi_report";
     private static final int NOTIFICATION_ID = 1001;
     private static final int MAX_LOGS = 50;
+    /** 勾选音乐字段后，歌词轮询间隔（只用于检测换行，不发消息就不占带宽） */
+    private static final long MUSIC_TICK_MS = 2000L;
+    /** 两次 Chatbox 发送的最小间隔，避免歌词换行太快触发 VRChat 限频 */
+    private static final long MUSIC_SEND_GAP_MS = 2000L;
+    /** 只有心率变化时，5 秒更新一次就够了 */
+    private static final long HEART_RATE_SEND_GAP_MS = 5000L;
 
     /** 一条上报记录 */
     public static class LogEntry {
@@ -159,6 +168,12 @@ public class ReporterService extends Service {
     private long nextSendAt;
     /** 「立即发送一次」请求 */
     private boolean forceSend;
+    /** 最近一次成功发出的文本，用于歌词变化时判断是否值得再发一条 */
+    private volatile String lastSentText = "";
+    /** 最近一次尝试发送的时刻（含失败），用于节流歌词/心率触发的发送 */
+    private volatile long lastAnySendAt;
+    /** 服务是否持有心率手环连接（只在勾选心率字段时持有） */
+    private boolean heartRateAcquired;
 
     @Override
     protected void attachBaseContext(Context newBase) {
@@ -238,6 +253,10 @@ public class ReporterService extends Service {
             worker = null;
         }
         sender.close();
+        if (heartRateAcquired) {
+            HeartRateManager.release();
+            heartRateAcquired = false;
+        }
         if (instance == this) instance = null;
         notifyListeners();
         super.onDestroy();
@@ -267,6 +286,16 @@ public class ReporterService extends Service {
         if (service != null) service.reschedule();
     }
 
+    /** 字段或权限变化后唤醒工作线程，立即重新评估音乐轮询 */
+    public static void wake() {
+        ReporterService service = instance;
+        if (service != null) {
+            synchronized (service.lock) {
+                service.lock.notifyAll();
+            }
+        }
+    }
+
     private void reportLoop() {
         while (loop) {
             boolean due;
@@ -276,6 +305,12 @@ public class ReporterService extends Service {
                 due = forceSend || nextSendAt == 0 || now >= nextSendAt;
                 if (due) forceSend = false;
             }
+
+            Set<ReportField> enabledFields = settings.getEnabledFields();
+            boolean musicEnabled = ReportBuilder.hasMusicFields(enabledFields);
+            boolean heartRateEnabled = enabledFields.contains(ReportField.HEART_RATE);
+            syncHeartRate(heartRateEnabled);
+            boolean fastTick = musicEnabled || heartRateEnabled;
 
             if (due) {
                 try {
@@ -288,13 +323,21 @@ public class ReporterService extends Service {
                     // 采集期间又点了「立即发送」：保持待发送状态，下一轮马上再发
                     nextSendAt = forceSend ? 0 : lastSendAt + intervalMs();
                 }
+            } else if (fastTick && latestSnapshot != null) {
+                // 常规上报没到点，但歌词/心率可能变了：复用上一轮快照快速更新
+                try {
+                    quickTick();
+                } catch (Throwable ignored) {
+                    // 音乐/心率读取失败不影响正常上报
+                }
             }
 
             synchronized (lock) {
                 if (!loop) break;
                 long waitMs = Math.max(0L, nextSendAt - System.currentTimeMillis());
+                if (fastTick) waitMs = Math.min(waitMs, MUSIC_TICK_MS);
                 try {
-                    // 到点、改间隔或「立即发送」都会唤醒
+                    // 到点、改间隔、改字段或「立即发送」都会唤醒
                     lock.wait(waitMs);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
@@ -322,6 +365,10 @@ public class ReporterService extends Service {
         WeatherInfo weather = WeatherRepository.isWeatherEnabled(enabledFields)
                 ? WeatherRepository.getForReport(this)
                 : null;
+        MusicInfo music = ReportBuilder.hasMusicFields(enabledFields)
+                ? NowPlayingRepository.snapshot(this)
+                : null;
+        Integer heartRate = heartRateBpm(enabledFields);
 
         ReportBuilder.Report report = ReportBuilder.build(
                 result.snapshot,
@@ -330,7 +377,9 @@ public class ReporterService extends Service {
                 settings.getModelDisplayMode() == ModelDisplayMode.PRODUCT_NAME,
                 weather,
                 settings.isHideUnavailable(),
-                LocaleHelper.getLanguage(this));
+                LocaleHelper.getLanguage(this),
+                music,
+                heartRate);
         latestReport = report;
 
         if (report.text.trim().isEmpty()) {
@@ -350,7 +399,9 @@ public class ReporterService extends Service {
                 report.text, settings.isSendImmediately(), settings.isNotificationSound());
         OscSender.Result sendResult = sender.send(this,
                 settings.getTargetIp(), settings.getTargetPort(), packet);
+        lastAnySendAt = System.currentTimeMillis();
         if (sendResult.ok) {
+            lastSentText = report.text;
             addLog(true, report.text,
                     text(R.string.log_sent, sendResult.bytes,
                             settings.getTargetIp(), settings.getTargetPort()));
@@ -358,6 +409,67 @@ public class ReporterService extends Service {
             addLog(false, report.text, sendResult.message);
         }
         notifyListeners();
+    }
+
+    /**
+     * 歌词换行 / 切歌 / 心率变化时的快速更新：
+     * 复用最近一次设备快照，不重新读硬件，也不刷新天气缓存，
+     * 只在文本真的变了时才发一条，避免 Chatbox 被刷屏。
+     */
+    private void quickTick() {
+        Set<ReportField> enabledFields = settings.getEnabledFields();
+        boolean musicEnabled = ReportBuilder.hasMusicFields(enabledFields);
+        boolean heartRateEnabled = enabledFields.contains(ReportField.HEART_RATE);
+        if (!musicEnabled && !heartRateEnabled) return;
+
+        long now = System.currentTimeMillis();
+        long minGap = musicEnabled ? MUSIC_SEND_GAP_MS : HEART_RATE_SEND_GAP_MS;
+        if (now - lastAnySendAt < minGap) return;
+
+        MusicInfo music = musicEnabled ? NowPlayingRepository.snapshot(this) : null;
+        Integer heartRate = heartRateBpm(enabledFields);
+        ReportBuilder.Report report = ReportBuilder.build(
+                latestSnapshot,
+                enabledFields,
+                settings.isAsciiOnly(),
+                settings.getModelDisplayMode() == ModelDisplayMode.PRODUCT_NAME,
+                WeatherRepository.getCached(this),
+                settings.isHideUnavailable(),
+                LocaleHelper.getLanguage(this),
+                music,
+                heartRate);
+        if (report.text.trim().isEmpty()) return;
+        if (report.text.equals(lastSentText)) return;
+        if (settings.getTargetIp().trim().isEmpty()) return;
+
+        byte[] packet = OscEncoder.chatboxInput(
+                report.text, settings.isSendImmediately(), settings.isNotificationSound());
+        OscSender.Result sendResult = sender.send(this,
+                settings.getTargetIp(), settings.getTargetPort(), packet);
+        lastAnySendAt = now;
+        if (sendResult.ok) {
+            lastSentText = report.text;
+            latestReport = report;
+            notifyListeners();
+        }
+    }
+
+    /** 勾选心率字段时，让服务持有一条手环连接；取消勾选立即释放 */
+    private void syncHeartRate(boolean enabled) {
+        if (enabled && !heartRateAcquired) {
+            HeartRateManager.acquire(this);
+            heartRateAcquired = true;
+        } else if (!enabled && heartRateAcquired) {
+            HeartRateManager.release();
+            heartRateAcquired = false;
+        }
+    }
+
+    /** 近 60 秒内没有新数据就按「不可用」处理，避免把旧心率一直发出去 */
+    private Integer heartRateBpm(Set<ReportField> fields) {
+        if (fields == null || !fields.contains(ReportField.HEART_RATE)) return null;
+        int bpm = HeartRateManager.getFreshBpm();
+        return bpm > 0 ? bpm : null;
     }
 
     private void addLog(boolean ok, String text, String detail) {

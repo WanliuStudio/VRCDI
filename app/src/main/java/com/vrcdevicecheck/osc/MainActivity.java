@@ -12,6 +12,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.Settings;
+import android.graphics.Typeface;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.Gravity;
@@ -31,6 +32,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.vrcdevicecheck.osc.data.AppSettings;
+import com.vrcdevicecheck.osc.data.FieldGroup;
 import com.vrcdevicecheck.osc.data.ModelDisplayMode;
 import com.vrcdevicecheck.osc.data.PrivilegeMode;
 import com.vrcdevicecheck.osc.data.ReportField;
@@ -38,6 +40,9 @@ import com.vrcdevicecheck.osc.device.DeviceInfoRepository;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
 import com.vrcdevicecheck.osc.device.ForegroundApp;
 import com.vrcdevicecheck.osc.device.VrSupport;
+import com.vrcdevicecheck.osc.media.HeartRateManager;
+import com.vrcdevicecheck.osc.media.MusicInfo;
+import com.vrcdevicecheck.osc.media.NowPlayingRepository;
 import com.vrcdevicecheck.osc.net.LanScanner;
 import com.vrcdevicecheck.osc.osc.ReportBuilder;
 import com.vrcdevicecheck.osc.priv.PrivilegeController;
@@ -96,6 +101,13 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
         @Override
         public void run() {
             refreshForegroundApp();
+            // 界面可见时顺带刷新音乐/心率预览
+            Set<ReportField> enabled = settings.getEnabledFields();
+            if (ReportBuilder.hasMusicFields(enabled)
+                    || enabled.contains(ReportField.HEART_RATE)) {
+                refreshPreview();
+            }
+            refreshHeartRateHint();
             // 界面已经不可见时不再续命，避免退到后台还在轮询
             if (foregroundTicking) main.postDelayed(this, 2000L);
         }
@@ -126,6 +138,8 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
     private TextView textIpModeHint;
     private TextView textForegroundApp;
     private TextView textWeatherHint;
+    private TextView textMusicHint;
+    private TextView textHeartRateHint;
 
     private DeviceSnapshot localSnapshot;
     private final List<CheckBox> fieldBoxes = new ArrayList<>();
@@ -148,7 +162,7 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
 
         bindViews();
         setupIpModeSpinner();
-        buildFieldCheckboxes();
+        buildFieldGroups();
         applySettingsToViews();
         attachWatchers();
         attachClicks();
@@ -332,52 +346,81 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                 : getString(R.string.ip_mode_hint_custom));
     }
 
-    /** 按字段枚举生成勾选框，避免逐段重复 XML */
-    private void buildFieldCheckboxes() {
+    /**
+     * 按分组平铺：组标题紧靠左边，子选项整体缩进，组与组之间留空隙。
+     * 结构像 Word 大纲（标题 + Tab 缩进的子段落），所有选项都直接可见。
+     */
+    private void buildFieldGroups() {
         containerFields.removeAllViews();
         fieldBoxes.clear();
-        for (final ReportField field : ReportField.values()) {
-            CheckBox box = new CheckBox(this);
-            box.setText(field.label(this));
-            box.setTag(field);
-            box.setTextColor(getColor(R.color.text_primary));
-            box.setTextSize(14f);
-            // VR 一体机用手柄射线点按，行高太小容易点空；统一抬高点击区域
-            if (VrSupport.isVrDevice()) {
-                int minHeight = Math.round(getResources().getDisplayMetrics().density * 48);
-                box.setMinHeight(minHeight);
-                int vertical = Math.round(getResources().getDisplayMetrics().density * 6);
-                box.setPadding(box.getPaddingLeft(), vertical, box.getPaddingRight(), vertical);
-            }
-            box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    // 代码回填（applySettingsToViews）时不写回配置，只响应真实点击
-                    if (!buttonView.isPressed()) return;
-                    Set<ReportField> current = EnumSet.noneOf(ReportField.class);
-                    current.addAll(settings.getEnabledFields());
-                    if (isChecked) current.add(field);
-                    else current.remove(field);
-                    settings.setEnabledFields(current);
-                    refreshPreview();
-                    if (isChecked && field.isWeather() && settings.getWeatherCity().isEmpty()) {
-                        promptWeatherCity();
-                    }
+        float density = getResources().getDisplayMetrics().density;
+        int indent = Math.round(density * 20);
+        boolean firstGroup = true;
+
+        for (FieldGroup group : FieldGroup.values()) {
+            TextView heading = new TextView(this);
+            heading.setText(group.label(this));
+            heading.setTextSize(15f);
+            heading.setTypeface(Typeface.DEFAULT_BOLD);
+            heading.setTextColor(getColor(R.color.text_primary));
+            int top = firstGroup ? Math.round(density * 2) : Math.round(density * 18);
+            heading.setPadding(0, top, 0, Math.round(density * 4));
+            containerFields.addView(heading);
+            firstGroup = false;
+
+            for (final ReportField field : group.fields()) {
+                CheckBox box = new CheckBox(this);
+                box.setText(field.label(this));
+                box.setTag(field);
+                box.setTextColor(getColor(R.color.text_primary));
+                box.setTextSize(14f);
+                int vertical = Math.round(density * 2);
+                box.setPadding(indent, vertical, 0, vertical);
+                // VR 一体机用手柄射线点按，行高太小容易点空
+                if (VrSupport.isVrDevice()) {
+                    box.setMinHeight(Math.round(density * 48));
+                    int vrVertical = Math.round(density * 6);
+                    box.setPadding(indent, vrVertical, 0, vrVertical);
                 }
-            });
-            fieldBoxes.add(box);
-            if (field == ReportField.MODEL) {
-                // 设备型号这一行右边挂「上报型号类型」下拉菜单
-                containerFields.addView(buildModelRow(box));
-            } else {
+                box.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                    @Override
+                    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                        // 代码回填（applySettingsToViews）时不写回配置，只响应真实点击
+                        if (!buttonView.isPressed()) return;
+                        Set<ReportField> current = EnumSet.noneOf(ReportField.class);
+                        current.addAll(settings.getEnabledFields());
+                        if (isChecked) current.add(field);
+                        else current.remove(field);
+                        settings.setEnabledFields(current);
+                        refreshPreview();
+                        refreshMusicHint();
+                        ReporterService.wake();
+                        if (isChecked && field.isWeather() && settings.getWeatherCity().isEmpty()) {
+                            promptWeatherCity();
+                        }
+                        if (isChecked && field.isMusic()
+                                && !NowPlayingRepository.hasAccess(MainActivity.this)) {
+                            promptMusicAccess();
+                        }
+                        if (isChecked && field == ReportField.HEART_RATE
+                                && !HeartRateManager.hasSelectedDevice(MainActivity.this)) {
+                            promptHeartRate();
+                        }
+                        refreshHeartRateHint();
+                    }
+                });
+                fieldBoxes.add(box);
                 containerFields.addView(box);
+                if (field == ReportField.MODEL) {
+                    addModelModeRow(density);
+                }
             }
         }
 
         textWeatherHint = new TextView(this);
         textWeatherHint.setTextSize(12f);
         textWeatherHint.setTextColor(getColor(R.color.text_secondary));
-        int pad = Math.round(getResources().getDisplayMetrics().density * 4);
+        int pad = Math.round(density * 4);
         textWeatherHint.setPadding(0, pad, 0, pad);
         containerFields.addView(textWeatherHint);
 
@@ -394,34 +437,77 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
             }
         });
         containerFields.addView(checkHideUnavailable);
+
+        textMusicHint = new TextView(this);
+        textMusicHint.setTextSize(12f);
+        int musicPad = Math.round(density * 4);
+        textMusicHint.setPadding(0, musicPad, 0, musicPad);
+        textMusicHint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                openNotificationAccess();
+            }
+        });
+        containerFields.addView(textMusicHint);
+
+        textHeartRateHint = new TextView(this);
+        textHeartRateHint.setTextSize(12f);
+        int heartPad = Math.round(density * 4);
+        textHeartRateHint.setPadding(0, heartPad, 0, heartPad);
+        textHeartRateHint.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(MainActivity.this, HeartRateActivity.class));
+            }
+        });
+        containerFields.addView(textHeartRateHint);
+
+        refreshMusicHint();
+        refreshHeartRateHint();
     }
 
-    /** 「设备型号」勾选框 + 右侧「上报型号类型」下拉菜单 */
-    private View buildModelRow(CheckBox modelBox) {
-        LinearLayout container = new LinearLayout(this);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
+    private void refreshHeartRateHint() {
+        if (textHeartRateHint == null || settings == null) return;
+        boolean enabled = settings.getEnabledFields().contains(ReportField.HEART_RATE);
+        textHeartRateHint.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        if (!enabled) return;
+
+        String name = HeartRateManager.getSelectedName(this);
+        if (name.isEmpty()) {
+            textHeartRateHint.setText(R.string.hint_heart_rate_no_device);
+            textHeartRateHint.setTextColor(getColor(R.color.warn));
+            return;
+        }
+        int bpm = HeartRateManager.getFreshBpm();
+        if (bpm > 0) {
+            textHeartRateHint.setText(
+                    getString(R.string.heart_rate_status_connected, name, bpm));
+            textHeartRateHint.setTextColor(getColor(R.color.text_secondary));
+        } else {
+            textHeartRateHint.setText(
+                    getString(R.string.heart_rate_status_idle, name));
+            textHeartRateHint.setTextColor(getColor(R.color.warn));
+        }
+    }
+
+    /** 「上报型号类型」下拉：挂在设备型号下面，比子选项再缩进一级 */
+    private void addModelModeRow(float density) {
+        LinearLayout wrap = new LinearLayout(this);
+        wrap.setOrientation(LinearLayout.VERTICAL);
+        wrap.setPadding(Math.round(density * 44), Math.round(density * 2),
+                0, Math.round(density * 6));
 
         TextView label = new TextView(this);
         label.setText(R.string.label_model_mode);
         label.setTextSize(11f);
         label.setTextColor(getColor(R.color.text_secondary));
-        container.addView(label);
-
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-
-        row.addView(modelBox, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.WRAP_CONTENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
+        wrap.addView(label);
 
         spinnerModelMode = new Spinner(this);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_spinner_item,
-                new String[]{ModelDisplayMode.REAL_MODEL.label(this), ModelDisplayMode.PRODUCT_NAME.label(this)});
+                new String[]{ModelDisplayMode.REAL_MODEL.label(this),
+                        ModelDisplayMode.PRODUCT_NAME.label(this)});
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerModelMode.setAdapter(adapter);
         spinnerModelMode.setContentDescription(getString(R.string.label_model_mode));
@@ -435,6 +521,7 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                         ? ModelDisplayMode.REAL_MODEL
                         : ModelDisplayMode.PRODUCT_NAME);
                 refreshPreview();
+                ReporterService.wake();
             }
 
             @Override
@@ -442,18 +529,74 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                 // 无需处理
             }
         });
-        row.addView(spinnerModelMode, new LinearLayout.LayoutParams(
-                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-        container.addView(row, new LinearLayout.LayoutParams(
+        wrap.addView(spinnerModelMode, new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
-        return container;
+        containerFields.addView(wrap);
     }
 
     private void applyModelModeToSpinner() {
         if (spinnerModelMode == null) return;
         spinnerModelMode.setSelection(
                 settings.getModelDisplayMode() == ModelDisplayMode.REAL_MODEL ? 0 : 1);
+    }
+
+    /** 音乐字段下方的权限提示：未授权时高亮，点按跳系统设置 */
+    private void refreshMusicHint() {
+        if (textMusicHint == null || settings == null) return;
+        boolean enabled = ReportBuilder.hasMusicFields(settings.getEnabledFields());
+        textMusicHint.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        if (!enabled) return;
+        boolean granted = NowPlayingRepository.hasAccess(this);
+        textMusicHint.setText(granted
+                ? R.string.music_access_granted_hint
+                : R.string.music_access_hint);
+        textMusicHint.setTextColor(getColor(granted ? R.color.text_secondary : R.color.warn));
+    }
+
+    private void promptMusicAccess() {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.music_access_dialog_title)
+                .setMessage(R.string.music_access_dialog_message)
+                .setPositiveButton(R.string.music_access_go, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        openNotificationAccess();
+                    }
+                })
+                .setNegativeButton(R.string.common_later, null)
+                .show();
+    }
+
+    private void promptHeartRate() {
+        if (isFinishing()) return;
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.heart_rate_prompt_title)
+                .setMessage(R.string.heart_rate_prompt_message)
+                .setPositiveButton(R.string.heart_rate_prompt_go,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                startActivity(new Intent(MainActivity.this,
+                                        HeartRateActivity.class));
+                            }
+                        })
+                .setNegativeButton(R.string.common_later, null)
+                .show();
+    }
+
+    private void openNotificationAccess() {
+        if (NowPlayingRepository.hasAccess(this)) {
+            toast(getString(R.string.music_access_granted_hint));
+            refreshMusicHint();
+            return;
+        }
+        try {
+            startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));
+        } catch (Throwable t) {
+            toast(getString(R.string.music_access_failed));
+        }
     }
 
     private void applySettingsToViews() {
@@ -601,6 +744,12 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                 settings.setEnabledFields(EnumSet.allOf(ReportField.class));
                 applySettingsToViews();
                 refreshPreview();
+                refreshMusicHint();
+                refreshHeartRateHint();
+                ReporterService.wake();
+                if (!NowPlayingRepository.hasAccess(MainActivity.this)) {
+                    promptMusicAccess();
+                }
             }
         });
 
@@ -610,6 +759,9 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                 settings.setEnabledFields(EnumSet.noneOf(ReportField.class));
                 applySettingsToViews();
                 refreshPreview();
+                refreshMusicHint();
+                refreshHeartRateHint();
+                ReporterService.wake();
             }
         });
 
@@ -991,26 +1143,34 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
             textPreviewHint.setVisibility(View.GONE);
             return;
         }
+        Set<ReportField> enabledFields = settings.getEnabledFields();
         WeatherInfo cachedWeather = WeatherRepository.getCached(this);
+        MusicInfo music = ReportBuilder.hasMusicFields(enabledFields)
+                ? NowPlayingRepository.snapshot(this) : null;
+        int bpm = enabledFields.contains(ReportField.HEART_RATE)
+                ? HeartRateManager.getFreshBpm() : 0;
+        Integer heartRate = bpm > 0 ? bpm : null;
         ReportBuilder.Report report = ReportBuilder.build(
                 snapshot,
-                settings.getEnabledFields(),
+                enabledFields,
                 settings.isAsciiOnly(),
                 settings.getModelDisplayMode() == ModelDisplayMode.PRODUCT_NAME,
                 cachedWeather,
                 settings.isHideUnavailable(),
-                LocaleHelper.getLanguage(this));
+                LocaleHelper.getLanguage(this),
+                music,
+                heartRate);
         textPreview.setText(report.text);
         textPreviewCount.setText(getString(R.string.preview_count,
                 report.charCount(), ReportBuilder.CHATBOX_LIMIT));
         String hint = report.limitHint(this);
-        if (settings.getEnabledFields().contains(ReportField.VRCHAT_FPS)
+        if (enabledFields.contains(ReportField.VRCHAT_FPS)
                 && report.text.contains("FPS: 不可用")) {
             String extra = getString(R.string.hint_fps_need_foreground);
             hint = hint == null ? extra : hint + "\n" + extra;
         }
         boolean weatherEnabled = false;
-        for (ReportField field : settings.getEnabledFields()) {
+        for (ReportField field : enabledFields) {
             if (field.isWeather()) weatherEnabled = true;
         }
         if (weatherEnabled && settings.getWeatherCity().isEmpty()) {
@@ -1020,11 +1180,25 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
             String extra = getString(R.string.hint_weather_no_data);
             hint = hint == null ? extra : hint + "\n" + extra;
         }
+        boolean musicEnabled = ReportBuilder.hasMusicFields(enabledFields);
+        if (musicEnabled && !NowPlayingRepository.hasAccess(this)) {
+            String extra = getString(R.string.hint_music_need_access);
+            hint = hint == null ? extra : hint + "\n" + extra;
+        } else if (musicEnabled && music == null) {
+            String extra = getString(R.string.hint_music_not_playing);
+            hint = hint == null ? extra : hint + "\n" + extra;
+        }
+        if (enabledFields.contains(ReportField.HEART_RATE) && heartRate == null) {
+            String extra = HeartRateManager.hasSelectedDevice(this)
+                    ? getString(R.string.hint_heart_rate_no_data)
+                    : getString(R.string.hint_heart_rate_no_device);
+            hint = hint == null ? extra : hint + "\n" + extra;
+        }
         if (settings.isHideUnavailable() && !report.hidden.isEmpty()) {
             String extra = getString(R.string.hint_hidden_count, report.hidden.size());
             hint = hint == null ? extra : hint + "\n" + extra;
         }
-        if (report.text.isEmpty() && !settings.getEnabledFields().isEmpty()) {
+        if (report.text.isEmpty() && !enabledFields.isEmpty()) {
             hint = getString(R.string.hint_all_hidden);
         }
         if (hint == null) {
@@ -1248,6 +1422,8 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
         refreshPrivilegeTexts();
         refreshFromService();
         refreshForegroundApp();
+        refreshMusicHint();
+        refreshHeartRateHint();
         foregroundTicking = true;
         main.removeCallbacks(foregroundTick);
         main.postDelayed(foregroundTick, 2000L);

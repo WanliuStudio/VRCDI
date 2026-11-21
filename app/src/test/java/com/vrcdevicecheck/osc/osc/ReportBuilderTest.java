@@ -7,6 +7,7 @@ import static org.junit.Assert.assertTrue;
 import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
 import com.vrcdevicecheck.osc.device.TestSnapshots;
+import com.vrcdevicecheck.osc.media.MusicInfo;
 import com.vrcdevicecheck.osc.weather.WeatherInfo;
 
 import org.junit.Test;
@@ -101,6 +102,80 @@ public class ReportBuilderTest {
         String text = ReportBuilder.render(TestSnapshots.full(),
                 Arrays.asList(ReportField.GPU_NAME, ReportField.GPU_USAGE), false);
         assertEquals("GPU: Maleoon 910 12%", text);
+    }
+
+    @Test
+    public void musicLineCombinesSelectedPartsAndLyric() {
+        MusicInfo music = new MusicInfo("夜曲", "周杰伦", "十一月的萧邦", "一群嗜血的蚂蚁");
+        ReportBuilder.Report report = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.MUSIC_TITLE, ReportField.MUSIC_ARTIST,
+                        ReportField.MUSIC_ALBUM, ReportField.MUSIC_LYRIC),
+                false, true, null, false, "zh", music);
+
+        assertEquals("♪ 夜曲 - 周杰伦 (十一月的萧邦)\n♪ 一群嗜血的蚂蚁", report.text);
+        assertTrue(report.included.contains(ReportField.MUSIC_LYRIC));
+        assertTrue(report.dropped.isEmpty());
+    }
+
+    @Test
+    public void heartRateLineRendersBpm() {
+        String text = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.HEART_RATE),
+                false, true, null, false, "en", null, 78).text;
+        assertEquals("Heart rate: 78bpm", text);
+    }
+
+    @Test
+    public void heartRateWithoutDataIsHidden() {
+        ReportBuilder.Report report = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.HEART_RATE),
+                false, true, null, true, "zh", null, null);
+        assertEquals("", report.text);
+        assertTrue(report.hidden.contains(ReportField.HEART_RATE));
+    }
+
+    @Test
+    public void musicLineShowsPlaybackProgress() {
+        MusicInfo music = new MusicInfo("夜曲", "周杰伦", "十一月的萧邦", "一群嗜血的蚂蚁",
+                80000L, 260000L);
+        String text = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.MUSIC_TITLE, ReportField.MUSIC_PROGRESS),
+                false, true, null, false, "zh", music).text;
+
+        assertEquals("♪ 夜曲 1:20 / 4:20", text);
+    }
+
+    @Test
+    public void musicLineOnlyUsesSelectedParts() {
+        MusicInfo music = new MusicInfo("夜曲", "周杰伦", "十一月的萧邦", "一群嗜血的蚂蚁");
+        String text = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.MUSIC_ARTIST, ReportField.MUSIC_LYRIC),
+                false, true, null, false, "zh", music).text;
+
+        assertEquals("♪ 周杰伦\n♪ 一群嗜血的蚂蚁", text);
+    }
+
+    @Test
+    public void musicInAsciiModeUsesAsciiPrefix() {
+        MusicInfo music = new MusicInfo("Nocturne", "Jay Chou", "November", "Ants");
+        String text = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.MUSIC_TITLE, ReportField.MUSIC_ARTIST,
+                        ReportField.MUSIC_ALBUM, ReportField.MUSIC_LYRIC),
+                true, true, null, false, "zh", music).text;
+
+        assertEquals("Music: Nocturne - Jay Chou (November)\nLyric: Ants", text);
+    }
+
+    @Test
+    public void musicFieldsHiddenWhenNothingPlaying() {
+        ReportBuilder.Report report = ReportBuilder.build(TestSnapshots.full(),
+                EnumSet.of(ReportField.MUSIC_TITLE, ReportField.MUSIC_LYRIC),
+                false, true, null, true, "zh", null);
+
+        assertEquals("", report.text);
+        assertTrue(report.hidden.contains(ReportField.MUSIC_TITLE));
+        assertTrue(report.hidden.contains(ReportField.MUSIC_LYRIC));
+        assertTrue(report.dropped.isEmpty());
     }
 
     private WeatherInfo weather() {
