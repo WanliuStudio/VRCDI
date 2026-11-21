@@ -196,17 +196,16 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
     private void maybeAskAutoUpdate() {
         settings.markAutoUpdateAsked();
         new AlertDialog.Builder(this)
-                .setTitle("自动检查更新")
-                .setMessage("是否开启自动检查更新？\n开启后每次打开应用都会静默检查新版本，"
-                        + "发现更新时才会弹窗提示。")
-                .setPositiveButton("开启", new DialogInterface.OnClickListener() {
+                .setTitle(R.string.auto_update_prompt_title)
+                .setMessage(R.string.auto_update_prompt_message)
+                .setPositiveButton(R.string.auto_update_enable, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         settings.setAutoUpdateCheck(true);
                         checkUpdateOnLaunch();
                     }
                 })
-                .setNegativeButton("暂不", new DialogInterface.OnClickListener() {
+                .setNegativeButton(R.string.auto_update_later, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         settings.setAutoUpdateCheck(false);
@@ -258,9 +257,7 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
                 ? getString(R.string.update_dialog_body, release.tag)
                 : body;
         if (!BuildConfig.RELEASE_SIGNED) {
-            message = message + "\n\n———\n"
-                    + "当前安装包使用测试签名，后续 Beta 与正式版统一使用发布私钥签名。"
-                    + "安装新版本前需要先卸载 VRCDI，否则会提示安装失败；卸载会清除已导入的表与主题。";
+            message = message + "\n\n" + getString(R.string.update_require_uninstall_note);
         }
 
         new AlertDialog.Builder(this)

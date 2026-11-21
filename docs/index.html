@@ -219,6 +219,16 @@
   }
   .hash button:hover { color: var(--text); border-color: #2c3a4d; }
 
+  .lang-select {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px 6px;
+    font-size: 13px;
+    outline: none;
+  }
+
   section { padding: 34px 0; }
 
   h2 {
@@ -353,6 +363,13 @@
       <a href="#notes">说明</a>
       <a href="#join">加入我们</a>
       <a id="nav-releases" href="https://github.com/WanliuStudio/VRCDI/releases" target="_blank" rel="noopener">更新日志</a>
+      <select id="lang-select" class="lang-select" aria-label="Language">
+        <option value="zh">简体中文</option>
+        <option value="en">English</option>
+        <option value="ja">日本語</option>
+        <option value="ru">Русский</option>
+        <option value="ko">한국어</option>
+      </select>
     </nav>
   </div>
 </header>
@@ -488,7 +505,8 @@
     </div>
 
     <div class="notice" style="margin-top:18px;">
-      <strong>下载提示：</strong>4.9.0 起使用发布私钥签名，并已按 Android 开发者验证（ADV）提交包名与证书；
+      <strong>下载提示：</strong>4.9.0 起使用发布私钥签名；开发者验证（ADV）需要在手机厂商开放平台完成注册后由平台自动提交，目前尚未完成，
+      部分设备安装时可能提示「未验证开发者」，可手动确认继续安装。
       4.4.4 Beta 及更早的 debug 签名版本需要<strong>先卸载再安装</strong>，否则会提示签名冲突。
       安装前请确认系统为 Android 10（API 29）及以上。
     </div>
@@ -506,7 +524,7 @@
         <a class="btn primary" href="https://discord.gg/ayjFK4KwC" target="_blank" rel="noopener">加入 Discord</a>
       </div>
 
-      <div class="card">
+      <div class="card" id="qq-card">
         <span class="tag">QQ</span>
         <h3>QQ 群</h3>
         <p>国内用户推荐，群号：</p>
@@ -589,6 +607,275 @@
       done();
     }
   }
+</script>
+
+<script>
+/* 多语言：按结构绑定文案；非中文界面隐藏 QQ 群（国外用不到 QQ） */
+(function () {
+  var E = {
+    nav: Array.prototype.slice.call(document.querySelectorAll('.top nav a')),
+    h1: document.querySelector('.hero h1'),
+    tagline: document.querySelector('.tagline'),
+    badges: Array.prototype.slice.call(document.querySelectorAll('.badges span')),
+    dlGitee: document.getElementById('dl-gitee'),
+    dlGithub: document.getElementById('dl-github'),
+    copy: document.getElementById('copy-sha'),
+    h2: Array.prototype.slice.call(document.querySelectorAll('main section h2')),
+    leads: [document.querySelector('#features .lead'), document.querySelector('#usage .lead'), document.querySelector('#join .lead')],
+    cards: Array.prototype.slice.call(document.querySelectorAll('#features .card')).map(function (c) {
+      return { tag: c.querySelector('.tag'), h3: c.querySelector('h3'), p: c.querySelector('p') };
+    }),
+    steps: Array.prototype.slice.call(document.querySelectorAll('.step')).map(function (s) {
+      return { strong: s.querySelector('strong'), span: s.querySelector('span') };
+    }),
+    limits: Array.prototype.slice.call(document.querySelectorAll('.limits p')),
+    noticeHero: document.querySelector('.hero .notice'),
+    noticeNotes: document.querySelector('#notes .notice'),
+    jH3: document.querySelector('#join .card h3'),
+    jP: document.querySelector('#join .card p'),
+    jBtn: document.querySelector('#join .card a.btn'),
+    qqCard: document.getElementById('qq-card'),
+    footer: document.querySelector('footer .row > span')
+  };
+
+  var zh = {
+    nav: E.nav.map(function (a) { return a.innerHTML; }),
+    h1: E.h1.innerHTML, tagline: E.tagline.innerHTML,
+    badges: E.badges.map(function (b) { return b.innerHTML; }),
+    dl: [E.dlGitee.innerHTML, E.dlGithub.innerHTML], copy: E.copy.textContent,
+    h2: E.h2.map(function (h) { return h.innerHTML; }),
+    leads: E.leads.map(function (l) { return l.innerHTML; }),
+    cards: E.cards.map(function (c) { return [c.tag.innerHTML, c.h3.innerHTML, c.p.innerHTML]; }),
+    steps: E.steps.map(function (s) { return [s.strong.innerHTML, s.span.innerHTML]; }),
+    limits: E.limits.map(function (p) { return p.innerHTML; }),
+    noticeHero: E.noticeHero.innerHTML, noticeNotes: E.noticeNotes.innerHTML,
+    jH3: E.jH3.innerHTML, jP: E.jP.innerHTML, jBtn: E.jBtn.innerHTML,
+    footer: E.footer.innerHTML
+  };
+
+  var T = {
+    en: {
+      title: 'VRCDI: The Only Official Website',
+      nav: ['Features', 'Usage', 'Notes', 'Join us', 'Releases'],
+      h1: 'VRCDI: The Only Official Website',
+      tagline: 'Read your Android device CPU, GPU, RAM and battery through Shizuku or Root, and send it live to the VRChat Chatbox over OSC.',
+      badges: ['Android 10+', 'Pure Java · no AndroidX UI', 'Shizuku / Root / No-auth'],
+      dl: ['Domestic download <small>Gitee</small>', 'GitHub download <small>Releases</small>'],
+      copy: 'Copy',
+      h2: ['What it does', 'How to use', 'Known limitations', 'Join us'],
+      leads: ['13 optional fields, assembled into multi-line text and sent to VRChat over UDP OSC.',
+              'Four steps after installing.',
+              'Found a bug or want to help testing? Join the community.'],
+      cards: [
+        ['Collect', '13 device fields', 'Brand, model, CPU name / frequency / temperature / usage, GPU name / frequency / temperature / usage, RAM, battery and charging state, foreground app.'],
+        ['Privilege', 'Three channels', 'Shizuku (shell), Root (auto-detects KernelSU / APatch / Magisk) and a no-auth fallback. Unreadable values show Unavailable instead of made-up numbers.'],
+        ['Send', 'OSC Chatbox', 'Sent via /chatbox/input to 127.0.0.1 or a custom IP, with immediate send, notification sound and ASCII-only options.'],
+        ['Limit', '144-char adaptive', 'Respects the chatbox limit and drops fields from the end by priority, telling you in the preview instead of truncating silently.'],
+        ['Device table', 'Model to product name', 'Import per-brand JSON tables and switch between the real model and the product name without rebuilding.'],
+        ['Theme', 'Skinnable', 'Import zip / tar.gz themes with background, button art and colors; applied after a restart.'],
+        ['Multi-line', 'Multi-line output', 'One line per group: brand/model, CPU, GPU, RAM, battery, App; whole lines are trimmed past 144 chars.'],
+        ['App table', 'Package to app name', 'Import a package map so the foreground app reads as WeChat / QQ / VRChat instead of a raw package name.'],
+        ['Update', 'In-app updates', 'Choose Gitee or GitHub plus a stable / beta channel; read notes inline and install directly.']
+      ],
+      steps: [
+        ['Authorize', 'Gear -> Privilege mode; authorize Shizuku or Root, or choose No-auth.'],
+        ['Pick target', 'Same device as VRChat -> This device; sending to a PC -> Custom... with the PC LAN IP.'],
+        ['Enable OSC', 'VRChat Action Menu -> Options -> OSC -> Enabled. For cross-device, launch VRChat with <code>--osc=9000:&lt;PC LAN IP&gt;:9001</code>.'],
+        ['Start reporting', 'Tick the fields you want and tap Start; the Chatbox then shows your device info.']
+      ],
+      limits: [
+        '<strong>GPU data is the least reliable</strong>: Android has no public API for GPU frequency / temperature / usage; it depends on vendor sysfs, and many devices show nothing even with root.',
+        '<strong>Quest standalone</strong> runs, but has no root and Shizuku is unsupported, so temperature and frequency are usually unavailable.',
+        '<strong>Foreground app</strong> needs the system Usage access permission; without it the field shows Unavailable.',
+        'Device tables, themes, app tables and in-app updates are still early; please file issues on the repository.'
+      ],
+      noticeHero: '<strong>Official download:</strong> download only from <strong>this page</strong>, <strong>GitHub Releases</strong> or <strong>Gitee Releases</strong>. Third-party download sites may repackage the APK or lag behind, and their descriptions often do not match the app. Do not install from unknown sources.',
+      noticeNotes: '<strong>Note:</strong> since 4.9.0 builds are signed with the release key. Android Developer Verification (ADV) is submitted by phone vendors after developer registration and is not finished yet, so some devices may show unverified developer; you can confirm to continue. Builds up to 4.4.4 Beta were debug-signed - uninstall before installing. Requires Android 10 (API 29)+.',
+      jH3: 'Discord server', jP: 'Recommended for international users: beta releases, chat and feedback.', jBtn: 'Join Discord',
+      footer: '© 2026 WanliuStudio · MIT License'
+    },
+
+    ja: {
+      title: 'VRCDI：唯一の公式サイト',
+      nav: ['機能', '使い方', '注意', '参加', '更新履歴'],
+      h1: 'VRCDI：唯一の公式サイト',
+      tagline: 'Shizuku または Root で Android の CPU・GPU・メモリ・バッテリーを読み取り、OSC で VRChat の Chatbox にリアルタイム送信します。',
+      badges: ['Android 10+', '純 Java・AndroidX UI なし', 'Shizuku / Root / 権限なし'],
+      dl: ['国内ダウンロード <small>Gitee</small>', 'GitHub ダウンロード <small>Releases</small>'],
+      copy: 'コピー',
+      h2: ['できること', '使い方', '既知の制限', '参加する'],
+      leads: ['13 項目を選択でき、複数行テキストにまとめて UDP OSC で VRChat に送信します。',
+              'インストール後の 4 ステップ。',
+              '不具合報告やテスト参加はコミュニティへ。'],
+      cards: [
+        ['収集', '13 項目のデバイス情報', 'ブランド、型番、CPU 名・周波数・温度・使用率、GPU 名・周波数・温度・使用率、RAM、バッテリーと充電状態、前面アプリ。'],
+        ['権限', '3 つのチャネル', 'Shizuku（shell）、Root（KernelSU / APatch / Magisk を自動判別）、権限なしのフォールバック。読めない値は「利用不可」と表示し、数値を作りません。'],
+        ['送信', 'OSC Chatbox', '/chatbox/input で送信。ローカル 127.0.0.1 または任意の IP を指定でき、即時送信・通知音・ASCII のみに対応。'],
+        ['制限', '144 文字に自動調整', 'Chatbox の上限を守り、超えた分は優先度の低い項目から削除。プレビューに「省略」と表示し、黙って切らない。'],
+        ['デバイス表', '型番 → 製品名', 'ブランド別の JSON を取り込み、実型番と製品名を切り替え可能。再ビルド不要。'],
+        ['テーマ', '着せ替え', 'zip / tar.gz テーマ（背景・ボタン画像・配色）を取り込み、再起動で反映。'],
+        ['複数行', '複数行表示', '分類ごとに 1 行：ブランド型番 / CPU / GPU / RAM / バッテリー / App。144 文字を超えると行単位で削除。'],
+        ['アプリ表', 'パッケージ → アプリ名', 'パッケージ対応表を取り込み、前面アプリを「WeChat」「QQ」「VRChat」などで表示。'],
+        ['更新', 'アプリ内更新', 'Gitee / GitHub の更新元と「正式版 / テスト版」チャンネルを選択。ログをページ内で確認し、そのままダウンロード・インストール。']
+      ],
+      steps: [
+        ['承認', '右上の歯車 -> 権限の申請方法。Shizuku か Root を承認、または「権限なし」を選択。'],
+        ['送信先', 'VRChat と同じ端末なら「この端末」、PC へ送るなら「カスタム...」で PC の LAN IP を入力。'],
+        ['OSC を有効化', 'VRChat アクションメニュー -> Options -> OSC -> Enabled。別端末へ送る場合は起動オプション <code>--osc=9000:&lt;PC の LAN IP&gt;:9001</code>。'],
+        ['送信開始', '表示したい項目にチェックし「送信開始」を押すと、Chatbox にデバイス情報が出ます。']
+      ],
+      limits: [
+        '<strong>GPU 情報が最も不確実</strong>：Android に GPU 周波数・温度・使用率の公開 API はなく、メーカー固有の sysfs に依存。root があっても読めない機種が多い。',
+        '<strong>Quest 単体</strong>：インストールは可能だが root がなく Shizuku も非公式のため、温度・周波数はほぼ利用不可。',
+        '<strong>前面アプリ</strong>：「使用状況へのアクセス」権限が必要。未許可だと「利用不可」。',
+        'デバイス表・テーマ・アプリ表・アプリ内更新はまだ初期段階です。問題はリポジトリの Issue へ。'
+      ],
+      noticeHero: '<strong>公式ダウンロード：</strong><strong>このページ</strong>、<strong>GitHub Releases</strong>、<strong>Gitee リリース</strong>からのみ入手してください。第三者のダウンロードサイトは APK を改変していたり古かったりし、説明も実際の機能と異なることがあります。出所不明の APK はインストールしないでください。',
+      noticeNotes: '<strong>注意：</strong>4.9.0 以降はリリース鍵で署名されています。Android 開発者検証（ADV）は各社の開発者登録後にプラットフォームが自動申請する仕組みで、まだ完了していないため「未検証の開発者」と表示される端末があります（確認して続行できます）。4.4.4 Beta 以前は debug 署名のため、インストール前にアンインストールが必要です。Android 10（API 29）以上が必要です。',
+      jH3: 'Discord サーバー', jP: '海外ユーザー向け。テスト版の配布、雑談、フィードバック。', jBtn: 'Discord に参加',
+      footer: '© 2026 WanliuStudio · MIT License'
+    },
+
+    ru: {
+      title: 'VRCDI: единственный официальный сайт',
+      nav: ['Возможности', 'Использование', 'Ограничения', 'Сообщество', 'История'],
+      h1: 'VRCDI: единственный официальный сайт',
+      tagline: 'Читает CPU, GPU, RAM и батарею Android через Shizuku или Root и отправляет их в чатбокс VRChat по OSC в реальном времени.',
+      badges: ['Android 10+', 'Чистый Java · без AndroidX UI', 'Shizuku / Root / без прав'],
+      dl: ['Скачать (Gitee) <small>Gitee</small>', 'Скачать (GitHub) <small>Releases</small>'],
+      copy: 'Копировать',
+      h2: ['Что умеет', 'Как пользоваться', 'Известные ограничения', 'Сообщество'],
+      leads: ['13 полей на выбор собираются в многострочный текст и отправляются в VRChat по UDP OSC.',
+              'Четыре шага после установки.',
+              'Нашли ошибку или хотите помочь с тестами? Заходите в сообщество.'],
+      cards: [
+        ['Сбор', '13 полей устройства', 'Бренд, модель, имя / частота / температура / загрузка CPU, имя / частота / температура / загрузка GPU, RAM, батарея и зарядка, приложение на переднем плане.'],
+        ['Права', 'Три канала', 'Shizuku (shell), Root (KernelSU / APatch / Magisk) и режим без прав. Недоступные значения показываются как «Недоступно», без выдуманных чисел.'],
+        ['Отправка', 'OSC Chatbox', 'Отправка через /chatbox/input на 127.0.0.1 или свой IP; есть немедленная отправка, звук и режим только ASCII.'],
+        ['Лимит', '144 символа', 'Соблюдает лимит чатбокса и отбрасывает поля с конца по приоритету, честно сообщая об этом в предпросмотре.'],
+        ['Таблица устройств', 'Модель → название', 'Импорт JSON по брендам и переключение между реальной моделью и названием продукта без пересборки.'],
+        ['Темы', 'Смена оформления', 'Импорт zip / tar.gz с фоном, кнопками и цветами; применяется после перезапуска.'],
+        ['Многострочность', 'Несколько строк', 'Одна строка на группу: бренд/модель, CPU, GPU, RAM, батарея, App; при переполнении строки удаляются целиком.'],
+        ['Таблица приложений', 'Пакет → имя', 'Импорт соответствий, чтобы приложение показывалось как WeChat / QQ / VRChat, а не пакетом.'],
+        ['Обновления', 'Обновление в приложении', 'Выбор источника Gitee/GitHub и канала «стабильный/бета»; журнал прямо на странице и установка без лишних шагов.']
+      ],
+      steps: [
+        ['Разрешения', 'Шестерёнка -> Способ прав; разрешите Shizuku или Root либо выберите «без прав».'],
+        ['Получатель', 'VRChat на этом же устройстве -> «Это устройство»; на ПК -> «Свой...» и LAN IP компьютера.'],
+        ['Включите OSC', 'Action Menu -> Options -> OSC -> Enabled. Для другого устройства запустите VRChat с <code>--osc=9000:&lt;LAN IP ПК&gt;:9001</code>.'],
+        ['Запуск', 'Отметьте поля и нажмите «Запустить отправку» - информация появится в Chatbox.']
+      ],
+      limits: [
+        '<strong>Данные GPU наименее надёжны</strong>: в Android нет публичного API для частоты / температуры / загрузки GPU, всё зависит от sysfs производителя; на многих устройствах не читается даже с root.',
+        '<strong>Quest standalone</strong>: установить можно, но root нет, а Shizuku официально не поддерживается - температура и частота обычно недоступны.',
+        '<strong>Приложение на переднем плане</strong> требует системного разрешения «Доступ к использованию»; без него поле показывает «Недоступно».',
+        'Таблицы устройств, темы, таблицы приложений и обновления ещё на раннем этапе; сообщайте о проблемах в Issues репозитория.'
+      ],
+      noticeHero: '<strong>Официальная загрузка:</strong> скачивайте только с <strong>этой страницы</strong>, <strong>GitHub Releases</strong> или <strong>Gitee Releases</strong>. Сторонние сайты могут перепаковать APK или отставать по версии, а их описание часто не соответствует приложению. Не устанавливайте APK из неизвестных источников.',
+      noticeNotes: '<strong>Примечание:</strong> с 4.9.0 сборки подписываются релизным ключом. Android Developer Verification (ADV) подаётся платформами производителей после регистрации разработчика и пока не завершён, поэтому на части устройств может появиться «непроверенный разработчик» - можно подтвердить и продолжить. Сборки до 4.4.4 Beta подписаны debug-ключом: перед установкой удалите старую версию. Требуется Android 10 (API 29)+.',
+      jH3: 'Сервер Discord', jP: 'Рекомендуется зарубежным пользователям: бета-сборки, общение и обратная связь.', jBtn: 'Вступить в Discord',
+      footer: '© 2026 WanliuStudio · MIT License'
+    },
+
+    ko: {
+      title: 'VRCDI: 유일한 공식 사이트',
+      nav: ['기능', '사용법', '제한', '참여', '변경 기록'],
+      h1: 'VRCDI: 유일한 공식 사이트',
+      tagline: 'Shizuku 또는 Root로 안드로이드의 CPU·GPU·RAM·배터리를 읽어 OSC로 VRChat 채팅창에 실시간 전송합니다.',
+      badges: ['Android 10+', '순수 Java · AndroidX UI 없음', 'Shizuku / Root / 권한 없음'],
+      dl: ['국내 다운로드 <small>Gitee</small>', 'GitHub 다운로드 <small>Releases</small>'],
+      copy: '복사',
+      h2: ['기능', '사용법', '알려진 제한', '참여하기'],
+      leads: ['13개 항목을 선택해 여러 줄 텍스트로 묶어 UDP OSC로 VRChat에 보냅니다.',
+              '설치 후 네 단계.',
+              '버그 제보나 테스트 참여는 커뮤니티로 오세요.'],
+      cards: [
+        ['수집', '13개 기기 정보', '브랜드, 모델, CPU 이름·주파수·온도·사용률, GPU 이름·주파수·온도·사용률, RAM, 배터리와 충전 상태, 포그라운드 앱.'],
+        ['권한', '세 가지 채널', 'Shizuku(shell), Root(KernelSU / APatch / Magisk 자동 판별), 권한 없음. 읽지 못한 값은 "사용 불가"로 표시하고 수치를 만들지 않습니다.'],
+        ['전송', 'OSC Chatbox', '/chatbox/input으로 127.0.0.1 또는 사용자 IP로 전송하며 즉시 전송, 알림음, ASCII 전용을 지원합니다.'],
+        ['제한', '144자 자동 조정', '채팅창 한도를 지키고 우선순위가 낮은 항목부터 끝에서 버리며, 미리보기에 표시해 조용히 자르지 않습니다.'],
+        ['기기 표', '모델 → 제품명', '브랜드별 JSON을 가져와 실제 모델과 제품명을 전환할 수 있으며 다시 빌드할 필요가 없습니다.'],
+        ['테마', '스킨 변경', 'zip / tar.gz 테마(배경, 버튼 이미지, 색상)를 가져오며 재시작 후 적용됩니다.'],
+        ['여러 줄', '여러 줄 표시', '분류마다 한 줄: 브랜드/모델, CPU, GPU, RAM, 배터리, App. 144자를 넘으면 줄 단위로 자릅니다.'],
+        ['앱 표', '패키지 → 앱 이름', '패키지 매핑을 가져와 포그라운드 앱을 WeChat / QQ / VRChat 같은 이름으로 표시합니다.'],
+        ['업데이트', '앱 내 업데이트', 'Gitee / GitHub 소스와 "정식판 / 테스트판" 채널을 선택하고, 로그를 페이지에서 보고 바로 설치합니다.']
+      ],
+      steps: [
+        ['권한', '오른쪽 위 톱니바퀴 -> 권한 요청 방식. Shizuku 또는 Root를 허용하거나 "권한 없음"을 선택.'],
+        ['대상 선택', 'VRChat과 같은 기기면 "이 기기", PC로 보낼 때는 "사용자 지정..."에서 PC LAN IP 입력.'],
+        ['OSC 켜기', 'VRChat 액션 메뉴 -> Options -> OSC -> Enabled. 다른 기기로 보낼 때는 실행 옵션 <code>--osc=9000:&lt;PC LAN IP&gt;:9001</code>.'],
+        ['전송 시작', '표시할 항목을 체크하고 "전송 시작"을 누르면 Chatbox에 기기 정보가 나타납니다.']
+      ],
+      limits: [
+        '<strong>GPU 정보가 가장 불확실</strong>: Android에는 GPU 주파수·온도·사용률 공개 API가 없어 제조사 sysfs에 의존하며, root가 있어도 읽지 못하는 기기가 많습니다.',
+        '<strong>Quest 단독</strong>: 설치와 실행은 되지만 root가 없고 Shizuku도 비공식이라 온도·주파수는 대부분 사용할 수 없습니다.',
+        '<strong>포그라운드 앱</strong>: 시스템 "사용 정보 접근" 권한이 필요하며, 없으면 "사용 불가"로 표시됩니다.',
+        '기기 표, 테마, 앱 표, 앱 내 업데이트는 아직 초기 단계입니다. 문제는 저장소 Issue로 알려 주세요.'
+      ],
+      noticeHero: '<strong>공식 다운로드:</strong> <strong>이 페이지</strong>, <strong>GitHub Releases</strong>, <strong>Gitee Releases</strong>에서만 받으세요. 제3자 다운로드 사이트는 APK를 변조하거나 구버전일 수 있고 설명이 실제 기능과 다른 경우가 많습니다. 출처가 불분명한 APK는 설치하지 마세요.',
+      noticeNotes: '<strong>참고:</strong> 4.9.0부터 릴리스 키로 서명됩니다. Android 개발자 검증(ADV)은 제조사 개발자 등록 후 플랫폼이 자동 제출하는 방식이며 아직 완료되지 않아 일부 기기에서 "미검증 개발자"가 표시될 수 있습니다(확인 후 계속 설치 가능). 4.4.4 Beta 이전은 debug 서명이므로 설치 전에 삭제해야 합니다. Android 10(API 29) 이상 필요.',
+      jH3: 'Discord 서버', jP: '해외 사용자 추천. 베타 배포, 대화, 피드백.', jBtn: 'Discord 참여',
+      footer: '© 2026 WanliuStudio · MIT License'
+    }
+  };
+
+  function set(el, value, html) {
+    if (!el || value == null) return;
+    if (html) el.innerHTML = value; else el.textContent = value;
+  }
+
+  function apply(lang) {
+    if (!T[lang] && lang !== 'zh') lang = 'en';
+    document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+    document.title = lang === 'zh' ? 'VRCDI：软件唯一官网' : (T[lang] && T[lang].title) || 'VRCDI';
+    if (E.qqCard) E.qqCard.style.display = lang === 'zh' ? '' : 'none';
+    var s = lang === 'zh' ? zh : T[lang];
+    E.nav.forEach(function (a, i) { set(a, s.nav[i], true); });
+    set(E.h1, s.h1, true);
+    set(E.tagline, s.tagline, true);
+    E.badges.forEach(function (b, i) { set(b, s.badges[i], true); });
+    set(E.dlGitee, s.dl[0], true);
+    set(E.dlGithub, s.dl[1], true);
+    set(E.copy, s.copy, false);
+    E.h2.forEach(function (h, i) { set(h, s.h2[i], true); });
+    E.leads.forEach(function (l, i) { set(l, s.leads[i], true); });
+    E.cards.forEach(function (c, i) {
+      set(c.tag, s.cards[i][0], true);
+      set(c.h3, s.cards[i][1], true);
+      set(c.p, s.cards[i][2], true);
+    });
+    E.steps.forEach(function (st, i) {
+      set(st.strong, s.steps[i][0], true);
+      set(st.span, s.steps[i][1], true);
+    });
+    E.limits.forEach(function (p, i) { set(p, s.limits[i], true); });
+    set(E.noticeHero, s.noticeHero, true);
+    set(E.noticeNotes, s.noticeNotes, true);
+    set(E.jH3, s.jH3, true);
+    set(E.jP, s.jP, true);
+    set(E.jBtn, s.jBtn, true);
+    set(E.footer, s.footer, true);
+    try { localStorage.setItem('vrcdi_lang', lang); } catch (e) { }
+  }
+
+  var select = document.getElementById('lang-select');
+  var initial = null;
+  try { initial = localStorage.getItem('vrcdi_lang'); } catch (e) { }
+  if (!initial) {
+    var nav = (navigator.language || 'zh').toLowerCase();
+    if (nav.indexOf('zh') === 0) initial = 'zh';
+    else if (nav.indexOf('ja') === 0) initial = 'ja';
+    else if (nav.indexOf('ru') === 0) initial = 'ru';
+    else if (nav.indexOf('ko') === 0) initial = 'ko';
+    else initial = 'en';
+  }
+  if (['zh', 'en', 'ja', 'ru', 'ko'].indexOf(initial) < 0) initial = 'en';
+  if (select) {
+    select.value = initial;
+    select.addEventListener('change', function () { apply(select.value); });
+  }
+  apply(initial);
+})();
 </script>
 
 </body>

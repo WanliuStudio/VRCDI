@@ -82,7 +82,7 @@ public class UpdateSettingsActivity extends BaseActivity {
         root.addView(autoCheck);
 
         TextView channelLabel = new TextView(this);
-        channelLabel.setText("更新频道");
+        channelLabel.setText(R.string.update_channel_label);
         channelLabel.setTextSize(14f);
         channelLabel.setPadding(0, dp(18), 0, dp(6));
         root.addView(channelLabel);
@@ -90,10 +90,10 @@ public class UpdateSettingsActivity extends BaseActivity {
         RadioGroup channelGroup = new RadioGroup(this);
         channelGroup.setOrientation(RadioGroup.VERTICAL);
         RadioButton stableChannel = new RadioButton(this);
-        stableChannel.setText("正式版（只接收稳定版本）");
+        stableChannel.setText(R.string.update_channel_stable);
         stableChannel.setId(2001);
         RadioButton betaChannel = new RadioButton(this);
-        betaChannel.setText("测试版（包含预发布版本）");
+        betaChannel.setText(R.string.update_channel_beta);
         betaChannel.setId(2002);
         channelGroup.addView(stableChannel);
         channelGroup.addView(betaChannel);
@@ -171,7 +171,7 @@ public class UpdateSettingsActivity extends BaseActivity {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         Button joinButton = new Button(this);
-        joinButton.setText("加入我们");
+        joinButton.setText(R.string.join_us);
         joinButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -279,9 +279,7 @@ public class UpdateSettingsActivity extends BaseActivity {
             sb.append("\n\n").append(body);
         }
         if (needsSignatureMigration(release)) {
-            sb.append("\n\n———\n")
-                    .append("注意：当前安装包使用测试签名，而后续 Beta 与正式版统一使用发布私钥签名。")
-                    .append("安装前需要先卸载 VRCDI，否则系统会提示安装失败。");
+            sb.append("\n\n").append(getString(R.string.update_require_uninstall_note));
         }
         detailView.setText(sb.toString());
     }
@@ -304,19 +302,15 @@ public class UpdateSettingsActivity extends BaseActivity {
         }
         if (needsSignatureMigration(latest)) {
             new AlertDialog.Builder(this)
-                    .setTitle("安装正式版前需要卸载")
-                    .setMessage("当前安装包的签名与后续版本不一致（后续 Beta 与正式版统一使用发布私钥签名），"
-                            + "直接覆盖会安装失败。\n\n"
-                            + "请先卸载 VRCDI，再安装新的 APK。\n"
-                            + "卸载会清除应用数据：已导入的设备表 / 应用表 / CPU 映射表 / 主题需要重新导入。\n\n"
-                            + "是否现在下载新的安装包？")
-                    .setPositiveButton("下载", new DialogInterface.OnClickListener() {
+                    .setTitle(R.string.update_migration_title)
+                    .setMessage(R.string.update_migration_message)
+                    .setPositiveButton(R.string.update_download, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
                             startDownload(asset);
                         }
                     })
-                    .setNegativeButton("取消", null)
+                    .setNegativeButton(R.string.common_cancel, null)
                     .show();
             return;
         }
@@ -377,7 +371,7 @@ public class UpdateSettingsActivity extends BaseActivity {
     private void attemptInstall() {
         if (pendingApk == null) return;
         if (!UpdateManager.canInstall(this)) {
-            statusView.setText("安装包已下载，请允许「安装未知应用」，返回后会自动安装");
+            statusView.setText(R.string.update_install_permission_hint);
             UpdateManager.openInstallPermission(this);
             return;
         }
