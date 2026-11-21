@@ -7,7 +7,7 @@
 VRCDI는 순수 Java로 만든 작은 안드로이드 앱입니다. **Shizuku**(또는 Root, 또는 권한 없이)를 통해 CPU / GPU / 메모리 / 배터리 등을 읽고, 체크한 항목을 여러 줄 텍스트로 묶어 **UDP OSC**의 `/chatbox/input`으로 VRChat에 보냅니다. 아바타 머리 위에 뜨는 채팅창(Chatbox)에 표시됩니다.
 
 - 패키지: `com.vrcdevicecheck.osc`
-- 버전: `4.9.0 Release (Build 420)`
+- 버전: `5.1.0 Beta2 (Build 431)`
 - 서명: **4.9.0 Release**부터 Beta와 정식 빌드가 같은 릴리스 키로 서명됩니다. 4.4.4 Beta 이전 빌드는 debug 서명이라 업데이트하려면 먼저 삭제해야 합니다(앱 데이터가 지워집니다).
 - 최소 사양: Android 10 (API 29)
 - 언어: Java 8, 서드파티 의존성은 Shizuku 하나뿐

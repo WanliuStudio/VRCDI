@@ -396,7 +396,7 @@ public class UpdateSettingsActivity extends BaseActivity {
             PackageInfo info = getPackageManager().getPackageInfo(getPackageName(), 0);
             return info.versionName;
         } catch (Throwable t) {
-            return "4.9.0 Release";
+            return "5.1.0 Beta2";
         }
     }
 
