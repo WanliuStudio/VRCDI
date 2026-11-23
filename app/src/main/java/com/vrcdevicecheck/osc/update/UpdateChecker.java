@@ -87,46 +87,57 @@ public final class UpdateChecker {
     }
 
     /**
-     * @param includePrerelease true 表示「测试版」频道：列表里最新的非草稿发行版（含预发布）；
-     *                          false 表示「正式版」频道：只接受正式发行版。
+     * @param includePrerelease true 表示「测试版」频道（含预发布）；
+     *                          false 表示「正式版」频道（只接受正式发行版）。
+     *
+     * 注意：Gitee 的 /latest 和列表顺序都不可靠（列表可能按创建时间升序，最先返回的是
+     * 最早的 0.1.1 Alpha），所以 Gitee 源统一取「列表里版本号最大的那个」。
      */
     public static Release fetchLatest(Context context, String source,
                                       boolean includePrerelease) throws Exception {
-        String base = SOURCE_GITEE.equals(source) ? GITEE_API : GITHUB_API;
-        if (includePrerelease) {
-            // 测试版频道：直接看列表，最新的非草稿发行版就是目标
-            Release fromList = fetchFirstFromList(context, base, false);
-            if (fromList != null) return fromList;
-            throw new Exception(LocaleHelper.str(context, R.string.update_err_no_release, "pre-release"));
+        boolean gitee = SOURCE_GITEE.equals(source);
+        String base = gitee ? GITEE_API : GITHUB_API;
+
+        if (gitee || includePrerelease) {
+            Release best = fetchBestFromList(context, base, !includePrerelease);
+            if (best != null) return best;
+            throw new Exception(LocaleHelper.str(context, R.string.update_err_no_release,
+                    includePrerelease ? "pre-release" : "stable"));
         }
+
         try {
-            // 正式版：/latest 本身就会跳过 pre-release
+            // GitHub 正式版：/latest 本身就会跳过 pre-release
             return parse(httpGet(context, base + "/latest"));
         } catch (Exception latestError) {
-            // 没有正式版时退回列表，但同样只接受非预发布
-            Release fromList = fetchFirstFromList(context, base, true);
-            if (fromList != null) return fromList;
+            Release best = fetchBestFromList(context, base, true);
+            if (best != null) return best;
             throw new Exception(LocaleHelper.str(context, R.string.update_err_no_release,
                     latestError.getMessage()));
         }
     }
 
     /**
-     * GET /releases?per_page=10，取第一个非 draft 的发行版；失败返回 null。
+     * GET /releases?per_page=50，取版本号最大的非草稿发行版；失败返回 null。
+     * 不依赖接口返回顺序——Gitee 可能是升序，GitHub 是降序。
      *
      * @param skipPrerelease true 时跳过 pre-release（正式版频道）
      */
-    private static Release fetchFirstFromList(Context context, String base, boolean skipPrerelease) {
+    private static Release fetchBestFromList(Context context, String base, boolean skipPrerelease) {
         try {
-            String json = httpGet(context, base + "?per_page=10");
+            String json = httpGet(context, base + "?per_page=50");
             JSONArray array = new JSONArray(json);
+            Release best = null;
             for (int i = 0; i < array.length(); i++) {
                 JSONObject obj = array.optJSONObject(i);
                 if (obj == null) continue;
                 if (obj.optBoolean("draft", false)) continue;
                 if (skipPrerelease && obj.optBoolean("prerelease", false)) continue;
-                return parseObject(obj);
+                Release candidate = parseObject(obj);
+                if (best == null || isNewer(candidate.tag, best.tag)) {
+                    best = candidate;
+                }
             }
+            return best;
         } catch (Throwable ignored) {
             // 列表也拿不到就交给上层报错
         }

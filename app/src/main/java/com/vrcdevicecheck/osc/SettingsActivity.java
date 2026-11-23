@@ -303,7 +303,7 @@ public class SettingsActivity extends BaseActivity {
         sb.append(getString(R.string.about_api, Build.VERSION.SDK_INT));
         device.setText(sb.toString());
 
-        String versionName = "5.1.0 Beta2";
+        String versionName = "5.1.1 Beta2.1";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =

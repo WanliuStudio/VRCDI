@@ -279,7 +279,7 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
         try {
             return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (Throwable t) {
-            return "5.1.0 Beta2";
+            return "5.1.1 Beta2.1";
         }
     }
 
@@ -940,7 +940,7 @@ public class MainActivity extends BaseActivity implements ReporterService.Listen
         sb.append(getString(R.string.about_api, Build.VERSION.SDK_INT));
         device.setText(sb.toString());
 
-        String versionName = "5.1.0 Beta2";
+        String versionName = "5.1.1 Beta2.1";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =
