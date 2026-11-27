@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VRCDI：软件唯一官网</title>
-<meta name="description" content="VRCDI 唯一官方发布页：通过 Shizuku / Root 读取安卓设备的 CPU、GPU、内存、电量等信息，用 OSC 发送到 VRChat 的 Chatbox。纯 Java，Android 10+。">
+<meta name="description" content="VRCDI（全称 VRChat Device Inspection）唯一官方发布页：通过 Shizuku / Root 读取安卓设备的 CPU、GPU、内存、电量等信息，用 OSC 发送到 VRChat 的 Chatbox。纯 Java，Android 10+。">
 <meta name="theme-color" content="#0b0f14">
 <meta name="msvalidate.01" content="6577B28163E53CF4589801DC68B47540" />
 <meta property="og:title" content="VRCDI：软件唯一官网">
@@ -197,6 +197,61 @@
   .btn.primary:hover { background: linear-gradient(135deg, #6fd0fa, #54c7fb); }
 
   .btn small { font-weight: 500; opacity: 0.75; font-size: 12px; }
+
+  .channel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 0 0 14px;
+  }
+
+  .channel-label { color: var(--muted); font-size: 12px; }
+
+  .channel-btn {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .channel-btn.active {
+    color: var(--text);
+    border-color: var(--accent-dim);
+    background: rgba(79, 195, 247, 0.12);
+  }
+
+  .adv-shots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+  }
+
+  .adv-shots figure {
+    margin: 0;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 10px;
+  }
+
+  .adv-shots img {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .adv-shots figcaption {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
 
   .hash {
     font-size: 12px;
@@ -392,6 +447,12 @@
       <span id="badge-version">5.1.1 Beta2.1 (Build 432)</span>
     </div>
 
+    <div class="channel" id="channel-switch">
+      <span class="channel-label" id="channel-label">下载版本</span>
+      <button type="button" class="channel-btn" data-channel="stable">正式版</button>
+      <button type="button" class="channel-btn active" data-channel="beta">测试版</button>
+    </div>
+
     <div class="actions">
       <a class="btn primary" id="dl-gitee" href="https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/VRCDI-5.1.1-beta2.1.apk" target="_blank" rel="noopener">
         国内下载 <small>Gitee</small>
@@ -505,11 +566,52 @@
     </div>
 
     <div class="notice" style="margin-top:18px;">
-      <strong>下载提示：</strong>当前为 <strong>5.1.1 Beta2.1 测试版</strong>，使用发布私钥签名；
+      <strong>下载提示：</strong>可选择<strong>正式版</strong>或<strong>测试版</strong>，两者均使用发布私钥签名；
       4.9.0 及之后的版本可直接覆盖升级，4.4.4 Beta 及更早的 debug 签名版本需要<strong>先卸载再安装</strong>。
       开发者验证（ADV）需要在手机厂商开放平台完成注册后由平台自动提交，目前尚未完成，
       部分设备安装时可能提示「未验证开发者」，可手动确认继续安装。
       安装前请确认系统为 Android 10（API 29）及以上。
+    </div>
+  </section>
+
+  <section id="adv-help">
+    <h2>安装时提示「开发者未验证」怎么办？</h2>
+    <p class="lead">
+      OPPO / vivo / 小米 / 荣耀 会对未完成开发者验证（ADV）的侧载应用弹出安全提示。
+      这是系统的安装校验，不代表安装包有问题；按提示确认即可继续安装。
+    </p>
+
+    <div class="steps">
+      <div class="step">
+        <div><strong>① 看到提示</strong><span>安装时出现「此应用开发者未验证」或类似文案，点「继续安装」。</span></div>
+      </div>
+      <div class="step">
+        <div><strong>② 二次确认</strong><span>若系统再次提示风险，选择「仍要安装 / 继续安装」。</span></div>
+      </div>
+      <div class="step">
+        <div><strong>③ 验证并完成</strong><span>按系统要求输入锁屏密码或指纹，等待安装完成即可。</span></div>
+      </div>
+    </div>
+
+    <p class="lead" style="margin-top:18px;">以 OPPO 为例（其他三家文案略有差异，操作相同）：</p>
+    <div class="adv-shots">
+      <figure>
+        <img src="step1.jpg" alt="OPPO 安装提示：应用开发者未验证" loading="lazy">
+        <figcaption>步骤 1：出现「未验证开发者」提示，点「继续安装」。</figcaption>
+      </figure>
+      <figure>
+        <img src="step2.jpg" alt="OPPO 二次确认安装" loading="lazy">
+        <figcaption>步骤 2：风险提示页选择「仍要安装」。</figcaption>
+      </figure>
+      <figure>
+        <img src="step3.jpg" alt="OPPO 验证并完成安装" loading="lazy">
+        <figcaption>步骤 3：输入锁屏密码 / 指纹验证，等待安装完成。</figcaption>
+      </figure>
+    </div>
+
+    <div class="notice" style="margin-top:18px;text-align:left;">
+      <strong>提示：</strong>如果确认后仍然无法安装，请先卸载旧版本（4.4.4 Beta 及更早为 debug 签名），
+      或到 设置 → 应用 → 特殊权限 中允许本应用安装未知应用。
     </div>
   </section>
 
@@ -554,18 +656,27 @@
   /*
    * ↓↓↓ 需要你改的地方都在这里 ↓↓↓
    *
-   * 1. giteeDownload / githubDownload 换成真实的「附件直链」。
+   * 1. CONFIG.stable / CONFIG.beta 分别填正式版和测试版的版本、哈希与两个直链。
    *    GitHub：Releases → 右键 APK → 复制链接，形如
-   *            https://github.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/文件名.apk
+   *            https://github.com/WanliuStudio/VRCDI/releases/download/标签/文件名.apk
    *    Gitee ：发行版 → 右键附件 → 复制链接，形如
-   *            https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/文件名.apk
-   * 2. sha256 换成你上传的那个 APK 的哈希（重新构建后要重新算）。
+   *            https://gitee.com/WanliuStudio/VRCDI/releases/download/标签/文件名.apk
+   * 2. sha256 换成对应 APK 的哈希（重新构建后要重新算）。
    */
   const CONFIG = {
-    version: '5.1.1 Beta2.1 (Build 432)',
-    sha256: '71b3954bcc3495fd870b4ae198f74fcb71fc3803f43566d425dd28977d0923d0',
-    giteeDownload: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/VRCDI-5.1.1-beta2.1.apk',
-    githubDownload: 'https://github.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/VRCDI-5.1.1-beta2.1.apk',
+    stable: {
+      version: '4.9.0 Release (Build 420)',
+      sha256: '1c3a8558cb81ce1cc8b1a305a5c5fa50957ef13e1b216e46202e564d30413ed3',
+      gitee: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk',
+      github: 'https://github.com/WanliuStudio/VRCDI/releases/download/4.9.0-Release/VRCDI-4.9.0-release.apk'
+    },
+    beta: {
+      version: '5.1.1 Beta2.1 (Build 432)',
+      sha256: '71b3954bcc3495fd870b4ae198f74fcb71fc3803f43566d425dd28977d0923d0',
+      gitee: 'https://gitee.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/VRCDI-5.1.1-beta2.1.apk',
+      github: 'https://github.com/WanliuStudio/VRCDI/releases/download/5.1.1-Beta2.1/VRCDI-5.1.1-beta2.1.apk'
+    },
+    defaultChannel: 'beta',
     giteeRepo: 'https://gitee.com/WanliuStudio/VRCDI',
     githubRepo: 'https://github.com/WanliuStudio/VRCDI',
     releases: 'https://github.com/WanliuStudio/VRCDI/releases'
@@ -573,17 +684,49 @@
 
   function byId(id) { return document.getElementById(id); }
 
-  byId('dl-gitee').href = CONFIG.giteeDownload;
-  byId('dl-github').href = CONFIG.githubDownload;
   byId('foot-github').href = CONFIG.githubRepo;
   byId('foot-gitee').href = CONFIG.giteeRepo;
   byId('foot-releases').href = CONFIG.releases;
   byId('nav-releases').href = CONFIG.releases;
-  byId('badge-version').textContent = CONFIG.version;
-  byId('sha256').textContent = CONFIG.sha256;
+
+  let currentChannel = CONFIG.defaultChannel;
+  let currentSha = CONFIG[currentChannel].sha256;
+
+  function applyChannel(channel) {
+    const info = CONFIG[channel] || CONFIG.stable;
+    currentChannel = channel;
+    currentSha = info.sha256;
+    byId('badge-version').textContent = info.version;
+    byId('sha256').textContent = info.sha256;
+    byId('dl-gitee').href = info.gitee;
+    byId('dl-github').href = info.github;
+    document.querySelectorAll('.channel-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-channel') === channel);
+    });
+    try { localStorage.setItem('vrcdi_channel', channel); } catch (e) { }
+  }
+
+  window.vrcdiRefreshChannel = function () { applyChannel(currentChannel); };
+
+  (function () {
+    let saved = null;
+    try { saved = localStorage.getItem('vrcdi_channel'); } catch (e) { }
+    if ((saved === 'stable' || saved === 'beta') && CONFIG[saved]) {
+      currentChannel = saved;
+    } else {
+      currentChannel = CONFIG.defaultChannel;
+    }
+    applyChannel(currentChannel);
+
+    document.querySelectorAll('.channel-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        applyChannel(btn.getAttribute('data-channel'));
+      });
+    });
+  })();
 
   byId('copy-sha').addEventListener('click', function () {
-    copyText(CONFIG.sha256, byId('copy-sha'));
+    copyText(currentSha, byId('copy-sha'));
   });
 
   byId('copy-qq').addEventListener('click', function () {
@@ -620,6 +763,8 @@
     badges: Array.prototype.slice.call(document.querySelectorAll('.badges span')),
     dlGitee: document.getElementById('dl-gitee'),
     dlGithub: document.getElementById('dl-github'),
+    channelLabel: document.getElementById('channel-label'),
+    channelBtns: Array.prototype.slice.call(document.querySelectorAll('.channel-btn')),
     copy: document.getElementById('copy-sha'),
     h2: Array.prototype.slice.call(document.querySelectorAll('main section h2')),
     leads: [document.querySelector('#features .lead'), document.querySelector('#usage .lead'), document.querySelector('#join .lead')],
@@ -636,6 +781,7 @@
     jP: document.querySelector('#join .card p'),
     jBtn: document.querySelector('#join .card a.btn'),
     qqCard: document.getElementById('qq-card'),
+    advHelp: document.getElementById('adv-help'),
     footer: document.querySelector('footer .row > span')
   };
 
@@ -644,6 +790,8 @@
     h1: E.h1.innerHTML, tagline: E.tagline.innerHTML,
     badges: E.badges.map(function (b) { return b.innerHTML; }),
     dl: [E.dlGitee.innerHTML, E.dlGithub.innerHTML], copy: E.copy.textContent,
+    channelLabel: E.channelLabel.textContent,
+    channelBtns: E.channelBtns.map(function (b) { return b.textContent; }),
     h2: E.h2.map(function (h) { return h.innerHTML; }),
     leads: E.leads.map(function (l) { return l.innerHTML; }),
     cards: E.cards.map(function (c) { return [c.tag.innerHTML, c.h3.innerHTML, c.p.innerHTML]; }),
@@ -661,8 +809,10 @@
       h1: 'VRCDI: The Only Official Website',
       tagline: 'Read your Android device CPU, GPU, RAM and battery through Shizuku or Root, and send it live to the VRChat Chatbox over OSC.',
       badges: ['Android 10+', 'Pure Java · no AndroidX UI', 'Shizuku / Root / No-auth'],
-      dl: ['Domestic download <small>Gitee</small>', 'GitHub download <small>Releases</small>'],
+      dl: ['Download (China region) <small>Gitee</small>', 'GitHub download <small>Releases</small>'],
       copy: 'Copy',
+      channelLabel: 'Download version',
+      channelBtns: ['Stable', 'Beta'],
       h2: ['What it does', 'How to use', 'Known limitations', 'Join us'],
       leads: ['13 optional fields, assembled into multi-line text and sent to VRChat over UDP OSC.',
               'Four steps after installing.',
@@ -702,8 +852,10 @@
       h1: 'VRCDI：唯一の公式サイト',
       tagline: 'Shizuku または Root で Android の CPU・GPU・メモリ・バッテリーを読み取り、OSC で VRChat の Chatbox にリアルタイム送信します。',
       badges: ['Android 10+', '純 Java・AndroidX UI なし', 'Shizuku / Root / 権限なし'],
-      dl: ['国内ダウンロード <small>Gitee</small>', 'GitHub ダウンロード <small>Releases</small>'],
+      dl: ['中国向けダウンロード <small>Gitee</small>', 'GitHub ダウンロード <small>Releases</small>'],
       copy: 'コピー',
+      channelLabel: 'ダウンロード版',
+      channelBtns: ['安定版', 'テスト版'],
       h2: ['できること', '使い方', '既知の制限', '参加する'],
       leads: ['13 項目を選択でき、複数行テキストにまとめて UDP OSC で VRChat に送信します。',
               'インストール後の 4 ステップ。',
@@ -743,8 +895,10 @@
       h1: 'VRCDI: единственный официальный сайт',
       tagline: 'Читает CPU, GPU, RAM и батарею Android через Shizuku или Root и отправляет их в чатбокс VRChat по OSC в реальном времени.',
       badges: ['Android 10+', 'Чистый Java · без AndroidX UI', 'Shizuku / Root / без прав'],
-      dl: ['Скачать (Gitee) <small>Gitee</small>', 'Скачать (GitHub) <small>Releases</small>'],
+      dl: ['Скачать (для Китая) <small>Gitee</small>', 'Скачать (GitHub) <small>Releases</small>'],
       copy: 'Копировать',
+      channelLabel: 'Канал загрузки',
+      channelBtns: ['Стабильная', 'Бета'],
       h2: ['Что умеет', 'Как пользоваться', 'Известные ограничения', 'Сообщество'],
       leads: ['13 полей на выбор собираются в многострочный текст и отправляются в VRChat по UDP OSC.',
               'Четыре шага после установки.',
@@ -784,8 +938,10 @@
       h1: 'VRCDI: 유일한 공식 사이트',
       tagline: 'Shizuku 또는 Root로 안드로이드의 CPU·GPU·RAM·배터리를 읽어 OSC로 VRChat 채팅창에 실시간 전송합니다.',
       badges: ['Android 10+', '순수 Java · AndroidX UI 없음', 'Shizuku / Root / 권한 없음'],
-      dl: ['국내 다운로드 <small>Gitee</small>', 'GitHub 다운로드 <small>Releases</small>'],
+      dl: ['중국 지역 다운로드 <small>Gitee</small>', 'GitHub 다운로드 <small>Releases</small>'],
       copy: '복사',
+      channelLabel: '다운로드 버전',
+      channelBtns: ['정식판', '테스트판'],
       h2: ['기능', '사용법', '알려진 제한', '참여하기'],
       leads: ['13개 항목을 선택해 여러 줄 텍스트로 묶어 UDP OSC로 VRChat에 보냅니다.',
               '설치 후 네 단계.',
@@ -830,6 +986,7 @@
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
     document.title = lang === 'zh' ? 'VRCDI：软件唯一官网' : (T[lang] && T[lang].title) || 'VRCDI';
     if (E.qqCard) E.qqCard.style.display = lang === 'zh' ? '' : 'none';
+    if (E.advHelp) E.advHelp.style.display = lang === 'zh' ? '' : 'none';
     var s = lang === 'zh' ? zh : T[lang];
     E.nav.forEach(function (a, i) { set(a, s.nav[i], true); });
     set(E.h1, s.h1, true);
@@ -838,6 +995,10 @@
     set(E.dlGitee, s.dl[0], true);
     set(E.dlGithub, s.dl[1], true);
     set(E.copy, s.copy, false);
+    set(E.channelLabel, s.channelLabel, false);
+    if (s.channelBtns) {
+      E.channelBtns.forEach(function (b, i) { set(b, s.channelBtns[i], false); });
+    }
     E.h2.forEach(function (h, i) { set(h, s.h2[i], true); });
     E.leads.forEach(function (l, i) { set(l, s.leads[i], true); });
     E.cards.forEach(function (c, i) {
@@ -856,6 +1017,7 @@
     set(E.jP, s.jP, true);
     set(E.jBtn, s.jBtn, true);
     set(E.footer, s.footer, true);
+    if (window.vrcdiRefreshChannel) window.vrcdiRefreshChannel();
     try { localStorage.setItem('vrcdi_lang', lang); } catch (e) { }
   }
 

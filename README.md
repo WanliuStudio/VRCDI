@@ -2,12 +2,12 @@
 
 # VRCDI
 
-> Pipe your Android device's live status into the VRChat chatbox.
+> Full name: **VRChat Device Inspection** — pipe your Android device's live status into the VRChat chatbox.
 
 VRCDI is a small pure-Java Android app: it reads CPU / GPU / RAM / battery and more through **Shizuku** (or Root, or with no privilege at all), assembles the fields you tick into a multi-line text, and sends it to VRChat over **UDP OSC** (`/chatbox/input`) so it shows up in the Chatbox above your avatar's head.
 
 - Package: `com.vrcdevicecheck.osc`
-- Version: `5.1.1 Beta2.1 (Build 432)`
+- Version: `5.2.1 Beta3.1 (Build 442)`
 - Signing: from **4.9.0 Release** on, Beta and release builds share the release key. Builds from 4.4.4 Beta and earlier are debug-signed, so upgrading them requires an uninstall first (app data will be wiped).
 - Minimum: Android 10 (API 29)
 - Language: Java 8; the only third-party dependency is Shizuku
