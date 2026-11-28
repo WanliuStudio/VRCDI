@@ -420,11 +420,24 @@ public final class SnapshotMapper {
     }
 
     /**
-     * VRChat 帧率：脚本用 dumpsys SurfaceFlinger --latency 取到一串 present 时间戳（纳秒），
-     * 这里用 (帧数-1)/(最后一帧-第一帧) 算出平均 FPS。
+     * 帧率：脚本按 FPS-Meter-Android 的思路，先找前台应用的 SurfaceFlinger 图层，
+     * 用 --latency 的时间戳算平均 FPS，失败再用 --timestats 的 averageFPS，
+     * 最终以 fps.value 直接给出整数。
+     *
+     * 旧版脚本输出的是 vrchat.frames（一串纳秒时间戳），这里保留兼容。
      */
     public static Float vrchatFps(Map<String, String> kv) {
         if (kv == null) return null;
+        String direct = kv.get("fps.value");
+        if (direct != null) {
+            try {
+                float value = Float.parseFloat(direct.trim());
+                if (value >= 1f && value <= 240f) return value;
+            } catch (NumberFormatException ignored) {
+                // 继续走旧格式
+            }
+        }
+
         String raw = kv.get("vrchat.frames");
         if (raw == null || raw.trim().isEmpty()) return null;
         long first = -1L;

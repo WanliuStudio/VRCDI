@@ -48,6 +48,8 @@ public class AppSettings {
     private static final String KEY_AUTO_UPDATE_ASKED = "auto_update_asked";
     private static final String KEY_UPDATE_CHANNEL = "update_channel";
     private static final String KEY_BATTERY_HINT = "battery_hint_shown";
+    /** 后台保活：精确闹钟 + Wi-Fi 锁 + CPU 唤醒锁 */
+    private static final String KEY_KEEP_ALIVE = "keep_alive";
     /** 首次启动引导（选语言 + OSC 教学）是否已经走过 */
     private static final String KEY_ONBOARDED = "onboarded";
 
@@ -344,6 +346,15 @@ public class AppSettings {
 
     public void markAutoUpdateAsked() {
         sp.edit().putBoolean(KEY_AUTO_UPDATE_ASKED, true).apply();
+    }
+
+    /** 后台保活：精确闹钟 + Wi-Fi 锁 + CPU 唤醒锁，默认开启 */
+    public boolean isKeepAlive() {
+        return sp.getBoolean(KEY_KEEP_ALIVE, true);
+    }
+
+    public void setKeepAlive(boolean enabled) {
+        sp.edit().putBoolean(KEY_KEEP_ALIVE, enabled).apply();
     }
 
     /** 更新频道：stable（正式版）/ beta（测试版，含预发布） */

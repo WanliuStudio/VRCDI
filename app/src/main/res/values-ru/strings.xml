@@ -132,7 +132,7 @@
     <string name="hint_hard_truncated">Больше 144 символов, конец обрезан</string>
     <string name="hint_hidden_count">Автоматически скрыто недоступных полей: %1$d (символы не расходуются)</string>
     <string name="hint_all_hidden">Все выбранные поля сейчас недоступны, поэтому всё скрыто.</string>
-    <string name="hint_fps_need_foreground">FPS считывается только когда VRChat на экране и используется канал Shizuku / Root. При нажатии «Обновить» здесь VRChat не на экране, поэтому «Недоступно» — это нормально.</string>
+    <string name="hint_fps_need_foreground">FPS берётся у приложения на переднем плане (например, VRChat) и требует канала Shizuku / Root. При нажатии «Обновить» здесь это приложение не на экране, поэтому «Недоступно» — нормально.</string>
     <string name="hint_weather_need_city">Для полей погоды сначала выберите город: Настройки → Город погоды.</string>
     <string name="hint_weather_no_data">Данных погоды ещё нет: они загрузятся при начале отправки, не чаще раза в 30 минут для одного города.</string>
 
@@ -180,6 +180,10 @@
     <!-- Меню настроек -->
     <string name="settings_title">Настройки</string>
     <string name="settings_interval">Интервал отправки</string>
+    <string name="settings_keep_alive">Работа в фоне</string>
+    <string name="keep_alive_switch">Включить работу в фоне (точные будильники + wakelock)</string>
+    <string name="keep_alive_benefit">Плюсы: сервис удерживает Wi-Fi lock и точными будильниками будит CPU после выключения экрана; после каждой отправки блокировки сразу снимаются, поэтому сервис реже засыпает или завершается, а обновления Chatbox стабильнее.</string>
+    <string name="keep_alive_cost">Минусы: точные будильники и wakelock расходуют батарею; если важнее автономность, выключите, но на устройствах без root сервис может быть остановлен после выключения экрана.</string>
     <string name="settings_weather_city">Город погоды</string>
     <string name="settings_weather_city_with">Город погоды (%1$s)</string>
     <string name="settings_privilege">Способ получения прав</string>
@@ -481,6 +485,7 @@
     <string name="send_err_no_permission">Нет разрешения INTERNET</string>
     <string name="send_err_exception">Ошибка отправки: %1$s</string>
     <string name="log_collect_error">Ошибка сбора или отправки</string>
+    <string name="log_shizuku_rebind_failed">Соединение с Shizuku потеряно, пытаемся переподключиться. Этот цикл пропущен, повторим автоматически.</string>
     <string name="log_collect_failed">Ошибка сбора</string>
     <string name="log_no_fields">Ни одно поле не выбрано</string>
     <string name="log_all_unavailable">Все выбранные поля сейчас недоступны, отправка не выполнена</string>

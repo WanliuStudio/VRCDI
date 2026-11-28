@@ -136,7 +136,7 @@
     <string name="hint_hard_truncated">已超过 144 字符，末尾被强制截断</string>
     <string name="hint_hidden_count">已自动隐藏 %1$d 个不可用字段（不占 144 字符）</string>
     <string name="hint_all_hidden">所选字段当前都不可用，已自动隐藏所有内容。</string>
-    <string name="hint_fps_need_foreground">帧率需要 VRChat 在前台时采集，并且使用 Shizuku / Root 通道；在本应用界面点「重新采集」时 VRChat 不在前台，读不到是正常的。</string>
+    <string name="hint_fps_need_foreground">帧率读取的是当前前台应用的画面刷新率（例如 VRChat），并且需要 Shizuku / Root 通道；在本应用界面点「重新采集」时目标应用不在前台，读不到是正常的。</string>
     <string name="hint_weather_need_city">天气类字段需要先选择城市：设置 → 天气城市设置。</string>
     <string name="hint_weather_no_data">天气数据还没取到：启动上报后会自动获取，同一城市 30 分钟内最多获取一次。</string>
 
@@ -186,6 +186,10 @@
     <!-- ==================== 设置一级菜单 ==================== -->
     <string name="settings_title">设置</string>
     <string name="settings_interval">上报时间设置</string>
+    <string name="settings_keep_alive">后台保活设置</string>
+    <string name="keep_alive_switch">开启后台保活（精确闹钟 + 唤醒锁）</string>
+    <string name="keep_alive_benefit">好处：前台服务会持有 Wi-Fi 锁，并用精确闹钟在息屏后定时唤醒 CPU；每次采集发送完立刻释放，避免服务被系统休眠或快速回收，Chatbox 上报更稳定。</string>
+    <string name="keep_alive_cost">代价：精确闹钟与唤醒锁会增加耗电，长期开启可能更费电；如果更在意续航，可以关闭，但非 root 机型在息屏后可能被系统清理。</string>
     <string name="settings_weather_city">天气城市设置</string>
     <string name="settings_weather_city_with">天气城市设置（%1$s）</string>
     <string name="settings_privilege">权限申请方式</string>
@@ -494,6 +498,7 @@
     <string name="send_err_no_permission">缺少网络权限（INTERNET）</string>
     <string name="send_err_exception">发送异常：%1$s</string>
     <string name="log_collect_error">采集或发送异常</string>
+    <string name="log_shizuku_rebind_failed">Shizuku 连接已断开，正在尝试重新绑定；本轮跳过，下一轮自动重试</string>
     <string name="log_collect_failed">采集失败</string>
     <string name="log_no_fields">未勾选任何字段</string>
     <string name="log_all_unavailable">所选字段当前都不可用，本次未发送</string>

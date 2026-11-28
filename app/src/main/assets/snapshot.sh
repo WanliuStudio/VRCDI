@@ -133,27 +133,69 @@ r soc.machine /sys/devices/soc0/machine
 r soc.family /sys/devices/soc0/family
 r soc.platform /sys/devices/system/soc/soc0/machine
 
-# ---------- 帧率（VRChat，需要 dumpsys，仅 Shizuku/Root 通道可用）----------
-# SurfaceFlinger --latency 的第 2~130 行是每帧的 present 时间戳（纳秒），
-# 取第二列（实际显示时间）交给 Java 侧算平均 FPS。
-# 图层名在不同机型/版本上可能是 "SurfaceView[包名/Activity]" 也可能只带 "VRChat"，
-# 所以依次按两个包名、再按 vrchat 关键字找，并且多试几个匹配到的图层。
-fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "com.vrchat.mobile.playstore")
-[ -n "$fps_layers" ] || fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "com.vrchat.oculus.quest")
-[ -n "$fps_layers" ] || fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -i "vrchat")
-
-if [ -n "$fps_layers" ]; then
-    echo "$fps_layers" | head -n 4 | while IFS= read -r vlayer; do
-        vlayer=$(printf '%s' "$vlayer" | sed 's/[[:space:]]*$//')
-        [ -n "$vlayer" ] || continue
-        vframes=$(dumpsys SurfaceFlinger --latency "$vlayer" 2>/dev/null | sed -n '2,130p' | awk '$2 > 0 { printf "%s;", $2 }')
-        if [ -n "$vframes" ]; then
-            printf 'fps.layer|%s\n' "$vlayer"
-            printf 'vrchat.frames|%s\n' "$vframes"
-            break
-        fi
-    done
+# ---------- 帧率（SurfaceFlinger，需要 dumpsys，仅 Shizuku/Root 通道可用）----------
+# 参考 FPS-Meter-Android 的检测原理，按同样的顺序：
+#   1. 从 dumpsys window / activity 取当前前台包名（桌面 / SystemUI 不算）；
+#   2. 在 SurfaceFlinger 图层列表里找该包的图层，优先 SurfaceView + BLAST；
+#   3. 首选 dumpsys SurfaceFlinger --latency <layer>，解析每帧 present 时间戳算平均 FPS；
+#   4. latency 拿不到时，退回 --timestats 的 averageFPS。
+fps_pkg=""
+fps_focus=$(dumpsys window 2>/dev/null | grep -E 'mCurrentFocus|mFocusedApp' | head -n 1)
+[ -n "$fps_focus" ] || fps_focus=$(dumpsys activity activities 2>/dev/null | grep -E 'topResumedActivity|mResumedActivity' | head -n 1)
+if [ -n "$fps_focus" ]; then
+    fps_pkg=$(printf '%s' "$fps_focus" | grep -oE '[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z0-9_]+)+/' | head -n 1 | tr -d '/')
 fi
+case "$fps_pkg" in
+    ""|android|com.android.systemui|*launcher*|*quickstep*) fps_pkg="" ;;
+esac
+
+fps_layer=""
+if [ -n "$fps_pkg" ]; then
+    fps_layers=$(dumpsys SurfaceFlinger --list 2>/dev/null | grep -F "$fps_pkg")
+    fps_layer=$(printf '%s\n' "$fps_layers" | grep -i 'SurfaceView' | grep -i 'BLAST' | tail -n 1)
+    [ -n "$fps_layer" ] || fps_layer=$(printf '%s\n' "$fps_layers" | grep -i 'SurfaceView' | tail -n 1)
+    [ -n "$fps_layer" ] || fps_layer=$(printf '%s\n' "$fps_layers" \
+        | grep -viE 'ActivityRecord|Background for|Bounds for|Dim layer|SnapshotStartingWindow|Transition|leash|^Task=' \
+        | tail -n 1)
+    fps_layer=$(printf '%s' "$fps_layer" | sed 's/[[:space:]]*$//')
+fi
+
+fps_value=""
+if [ -n "$fps_layer" ]; then
+    fps_value=$(dumpsys SurfaceFlinger --latency "$fps_layer" 2>/dev/null | awk '
+        NR > 1 && NF >= 3 {
+            t = 0
+            if (($2 + 0) > 0 && ($2 + 0) != 9223372036854775807) t = $2 + 0
+            else if (($3 + 0) > 0 && ($3 + 0) != 9223372036854775807) t = $3 + 0
+            if (t > 0) {
+                if (prev > 0) { sum += t - prev; count++ }
+                prev = t
+            }
+        }
+        END {
+            if (count > 0 && sum > 0) {
+                v = count * 1000000000 / sum
+                if (v >= 1 && v <= 240) printf "%.0f", v
+            }
+        }')
+fi
+
+# latency 不可用时用 timestats 的 averageFPS 兜底（本轮结束后 enable，下一轮有数据）
+if [ -z "$fps_value" ] && [ -n "$fps_pkg" ]; then
+    fps_value=$(dumpsys SurfaceFlinger --timestats -dump 2>/dev/null | awk -v pkg="$fps_pkg" '
+        function emit() {
+            if (cur != "" && avg > 0 && index(cur, pkg) > 0) { print avg; done = 1; exit }
+        }
+        /layerName =/ { emit(); cur = $0; sub(/^.*layerName = /, "", cur); avg = 0; next }
+        /averageFPS =/ { a = $0; sub(/^.*averageFPS = /, "", a); avg = a + 0; next }
+        END { if (!done) emit() }')
+    fps_value=$(printf '%s' "$fps_value" | awk 'NF { printf "%.0f", $1; exit }')
+    dumpsys SurfaceFlinger --timestats -clear -enable >/dev/null 2>&1
+fi
+
+[ -n "$fps_value" ] && printf 'fps.value|%s\n' "$fps_value"
+[ -n "$fps_pkg" ] && printf 'fps.package|%s\n' "$fps_pkg"
+[ -n "$fps_layer" ] && printf 'fps.layer|%s\n' "$fps_layer"
 
 # ---------- root 环境探测 ----------
 printf 'root.uid|%s\n' "$(id -u 2>/dev/null | tr -dc '0-9')"

@@ -1,5 +1,6 @@
 package com.vrcdevicecheck.osc.service;
 
+import android.app.AlarmManager;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,14 +9,17 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.PowerManager;
 
 import com.vrcdevicecheck.osc.MainActivity;
 import com.vrcdevicecheck.osc.R;
 import com.vrcdevicecheck.osc.data.AppSettings;
 import com.vrcdevicecheck.osc.data.ModelDisplayMode;
+import com.vrcdevicecheck.osc.data.PrivilegeMode;
 import com.vrcdevicecheck.osc.data.ReportField;
 import com.vrcdevicecheck.osc.device.DeviceInfoRepository;
 import com.vrcdevicecheck.osc.device.DeviceSnapshot;
@@ -27,6 +31,7 @@ import com.vrcdevicecheck.osc.osc.OscSender;
 import com.vrcdevicecheck.osc.osc.ReportBuilder;
 import com.vrcdevicecheck.osc.priv.PrivilegeController;
 import com.vrcdevicecheck.osc.priv.PrivilegedShell;
+import com.vrcdevicecheck.osc.priv.ShizukuShell;
 import com.vrcdevicecheck.osc.util.LocaleHelper;
 import com.vrcdevicecheck.osc.weather.WeatherInfo;
 import com.vrcdevicecheck.osc.weather.WeatherRepository;
@@ -40,6 +45,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * 前台上报服务。
@@ -57,6 +65,8 @@ public class ReporterService extends Service {
     public static final String ACTION_START = "com.vrcdevicecheck.osc.action.START";
     public static final String ACTION_STOP = "com.vrcdevicecheck.osc.action.STOP";
     public static final String ACTION_SEND_NOW = "com.vrcdevicecheck.osc.action.SEND_NOW";
+    /** AlarmManager 每轮唤醒 */
+    public static final String ACTION_TICK = "com.vrcdevicecheck.osc.action.TICK";
 
     private static final String CHANNEL_ID = "vrcdi_report";
     private static final int NOTIFICATION_ID = 1001;
@@ -160,8 +170,13 @@ public class ReporterService extends Service {
     private DeviceInfoRepository repository;
     private final OscSender sender = new OscSender();
     private final Object lock = new Object();
-    private volatile boolean loop;
-    private Thread worker;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean ticking = new AtomicBoolean(false);
+    private AlarmManager alarmManager;
+    private PendingIntent tickIntent;
+    private PowerManager.WakeLock wakeLock;
+    private WifiManager.WifiLock wifiLock;
+    private volatile boolean alarmScheduled;
     /** 上一轮发送完成的时间；用于改间隔后按新间隔重新计算下一次发送时刻 */
     private volatile long lastSendAt;
     /** 下一次发送的目标时刻（0 表示下一轮立刻发送） */
@@ -193,23 +208,97 @@ public class ReporterService extends Service {
         settings = new AppSettings(this);
         repository = new DeviceInfoRepository(this);
         createChannel();
+        alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent tick = new Intent(this, ReporterService.class).setAction(ACTION_TICK);
+        tickIntent = PendingIntent.getService(this, 2, tick,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        applyLocks();
+    }
+
+    /** 按设置获取/释放 Wi-Fi 锁与 CPU 唤醒锁（保活开关） */
+    private void applyLocks() {
+        if (settings != null && settings.isKeepAlive()) {
+            acquireWifiLock();
+        } else {
+            releaseWifiLock();
+        }
+    }
+
+    private void acquireWifiLock() {
+        if (wifiLock != null) return;
+        try {
+            WifiManager wifi = (WifiManager) getApplicationContext()
+                    .getSystemService(Context.WIFI_SERVICE);
+            if (wifi == null) return;
+            wifiLock = wifi.createWifiLock(
+                    WifiManager.WIFI_MODE_FULL_HIGH_PERF, "vrcdi:report");
+            wifiLock.setReferenceCounted(false);
+            wifiLock.acquire();
+        } catch (Throwable ignored) {
+            wifiLock = null;
+        }
+    }
+
+    private void releaseWifiLock() {
+        if (wifiLock == null) return;
+        try {
+            if (wifiLock.isHeld()) wifiLock.release();
+        } catch (Throwable ignored) {
+            // 忽略
+        }
+        wifiLock = null;
+    }
+
+    private void acquireWakeLock() {
+        try {
+            if (wakeLock == null) {
+                PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                if (pm == null) return;
+                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "vrcdi:tick");
+                wakeLock.setReferenceCounted(false);
+            }
+            if (!wakeLock.isHeld()) wakeLock.acquire(30000L);
+        } catch (Throwable ignored) {
+            // 忽略
+        }
+    }
+
+    private void releaseWakeLock() {
+        try {
+            if (wakeLock != null && wakeLock.isHeld()) wakeLock.release();
+        } catch (Throwable ignored) {
+            // 忽略
+        }
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent == null ? null : intent.getAction();
         if (ACTION_STOP.equals(action)) {
+            cancelAlarm();
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (ACTION_TICK.equals(action)) {
+            // 进程被杀后闹钟仍可能把服务拉起来：先恢复前台身份，再跑一轮
+            startAsForeground();
+            if (!running) {
+                running = true;
+                synchronized (lock) {
+                    forceSend = true;
+                    nextSendAt = 0;
+                }
+            }
+            handleTick();
+            return START_STICKY;
         }
         if (ACTION_SEND_NOW.equals(action)) {
             synchronized (lock) {
                 forceSend = true;
                 nextSendAt = 0;
-                lock.notifyAll();
             }
-            // 服务本来就在跑：只唤醒工作线程，不重复走启动流程
             if (running) {
+                scheduleTick(0L);
                 notifyListeners();
                 return START_STICKY;
             }
@@ -217,26 +306,19 @@ public class ReporterService extends Service {
         }
 
         startAsForeground();
+        boolean firstStart = !running;
         running = true;
-        if (worker == null || !worker.isAlive()) {
-            loop = true;
+        if (firstStart) {
             synchronized (lock) {
-                // 启动即发（默认）：下一轮直接发送；关闭后先等一个间隔
                 if (!forceSend) {
                     nextSendAt = settings.isSendOnStart()
                             ? 0
                             : System.currentTimeMillis() + intervalMs();
                 }
             }
-            worker = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    reportLoop();
-                }
-            }, "vrcdi-reporter");
-            worker.setPriority(Thread.NORM_PRIORITY - 1);
-            worker.start();
         }
+        applyLocks();
+        scheduleTick(0L);
         notifyListeners();
         return START_STICKY;
     }
@@ -244,14 +326,10 @@ public class ReporterService extends Service {
     @Override
     public void onDestroy() {
         running = false;
-        loop = false;
-        synchronized (lock) {
-            lock.notifyAll();
-        }
-        if (worker != null) {
-            worker.interrupt();
-            worker = null;
-        }
+        cancelAlarm();
+        releaseWakeLock();
+        releaseWifiLock();
+        executor.shutdownNow();
         sender.close();
         if (heartRateAcquired) {
             HeartRateManager.release();
@@ -274,9 +352,9 @@ public class ReporterService extends Service {
     private void reschedule() {
         synchronized (lock) {
             long base = lastSendAt > 0 ? lastSendAt : System.currentTimeMillis();
-            nextSendAt = Math.max(System.currentTimeMillis(), base + intervalMs());
-            lock.notifyAll();
+            nextSendAt = forceSend ? 0 : Math.max(System.currentTimeMillis(), base + intervalMs());
         }
+        scheduleTick(0L);
         updateNotification();
     }
 
@@ -286,69 +364,128 @@ public class ReporterService extends Service {
         if (service != null) service.reschedule();
     }
 
-    /** 字段或权限变化后唤醒工作线程，立即重新评估音乐轮询 */
-    public static void wake() {
+    /** 后台保活开关变化：重新申请/释放锁并重排闹钟 */
+    public static void onKeepAliveChanged() {
         ReporterService service = instance;
         if (service != null) {
-            synchronized (service.lock) {
-                service.lock.notifyAll();
+            service.applyLocks();
+            service.reschedule();
+        }
+    }
+
+    /** 字段或权限变化后尽快评估一次（音乐/心率） */
+    public static void wake() {
+        ReporterService service = instance;
+        if (service != null && service.running) service.scheduleTick(300L);
+    }
+
+    /** 计算下一次唤醒时刻；保活模式用精确闹钟并允许 Doze 唤醒 */
+    private void scheduleTick(long extraDelayMs) {
+        if (!running || alarmManager == null || tickIntent == null) return;
+        long now = System.currentTimeMillis();
+        long target;
+        synchronized (lock) {
+            target = forceSend || nextSendAt <= 0 ? now : nextSendAt;
+        }
+        if (hasFastFields()) {
+            target = Math.min(target, now + MUSIC_TICK_MS);
+        }
+        if (target < now + 500L) target = now + 500L;
+        if (extraDelayMs > 0L) target += extraDelayMs;
+        try {
+            if (settings.isKeepAlive()) {
+                alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, target, tickIntent);
+            } else {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, target, tickIntent);
+            }
+            alarmScheduled = true;
+        } catch (Throwable t) {
+            try {
+                alarmManager.set(AlarmManager.RTC_WAKEUP, target, tickIntent);
+                alarmScheduled = true;
+            } catch (Throwable ignored) {
+                alarmScheduled = false;
             }
         }
     }
 
-    private void reportLoop() {
-        while (loop) {
-            boolean due;
-            synchronized (lock) {
-                if (!loop) break;
-                long now = System.currentTimeMillis();
-                due = forceSend || nextSendAt == 0 || now >= nextSendAt;
-                if (due) forceSend = false;
-            }
+    private boolean hasFastFields() {
+        Set<ReportField> fields = settings == null ? null : settings.getEnabledFields();
+        return fields != null
+                && (ReportBuilder.hasMusicFields(fields) || fields.contains(ReportField.HEART_RATE));
+    }
 
-            Set<ReportField> enabledFields = settings.getEnabledFields();
-            boolean musicEnabled = ReportBuilder.hasMusicFields(enabledFields);
-            boolean heartRateEnabled = enabledFields.contains(ReportField.HEART_RATE);
-            syncHeartRate(heartRateEnabled);
-            boolean fastTick = musicEnabled || heartRateEnabled;
+    private void cancelAlarm() {
+        alarmScheduled = false;
+        try {
+            if (alarmManager != null && tickIntent != null) alarmManager.cancel(tickIntent);
+        } catch (Throwable ignored) {
+            // 忽略
+        }
+    }
 
-            if (due) {
+    /** Alarm 到点：短暂持锁，交后台线程跑一轮，完成后释放并安排下一次 */
+    private void handleTick() {
+        if (!running) return;
+        if (!ticking.compareAndSet(false, true)) {
+            scheduleTick(1000L);
+            return;
+        }
+        final boolean keepAlive = settings.isKeepAlive();
+        if (keepAlive) acquireWakeLock();
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
                 try {
-                    sampleAndSend();
+                    doTick();
                 } catch (Throwable t) {
                     addLog(false, text(R.string.log_collect_error), t.getClass().getSimpleName());
-                }
-                lastSendAt = System.currentTimeMillis();
-                synchronized (lock) {
-                    // 采集期间又点了「立即发送」：保持待发送状态，下一轮马上再发
-                    nextSendAt = forceSend ? 0 : lastSendAt + intervalMs();
-                }
-            } else if (fastTick && latestSnapshot != null) {
-                // 常规上报没到点，但歌词/心率可能变了：复用上一轮快照快速更新
-                try {
-                    quickTick();
-                } catch (Throwable ignored) {
-                    // 音乐/心率读取失败不影响正常上报
+                } finally {
+                    if (keepAlive) releaseWakeLock();
+                    ticking.set(false);
+                    if (running) scheduleTick(0L);
                 }
             }
+        });
+    }
 
+    /** 执行一轮：到点就采集+发送，否则只做歌词/心率快速更新 */
+    private void doTick() {
+        Set<ReportField> enabledFields = settings.getEnabledFields();
+        boolean musicEnabled = ReportBuilder.hasMusicFields(enabledFields);
+        boolean heartRateEnabled = enabledFields.contains(ReportField.HEART_RATE);
+        syncHeartRate(heartRateEnabled);
+
+        boolean due;
+        synchronized (lock) {
+            long now = System.currentTimeMillis();
+            due = forceSend || nextSendAt == 0 || now >= nextSendAt;
+            if (due) forceSend = false;
+        }
+
+        if (due) {
+            sampleAndSend();
+            lastSendAt = System.currentTimeMillis();
             synchronized (lock) {
-                if (!loop) break;
-                long waitMs = Math.max(0L, nextSendAt - System.currentTimeMillis());
-                if (fastTick) waitMs = Math.min(waitMs, MUSIC_TICK_MS);
-                try {
-                    // 到点、改间隔、改字段或「立即发送」都会唤醒
-                    lock.wait(waitMs);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
+                nextSendAt = forceSend ? 0 : lastSendAt + intervalMs();
+            }
+        } else if ((musicEnabled || heartRateEnabled) && latestSnapshot != null) {
+            try {
+                quickTick();
+            } catch (Throwable ignored) {
+                // 音乐/心率读取失败不影响正常上报
             }
         }
     }
 
     private void sampleAndSend() {
-        PrivilegedShell shell = PrivilegeController.shellFor(settings.getPrivilegeMode());
+        PrivilegeMode mode = settings.getPrivilegeMode();
+        if (mode == PrivilegeMode.SHIZUKU && !ShizukuShell.ensureBound(this)) {
+            addLog(false, text(R.string.log_shizuku_rebind_failed), null);
+            notifyListeners();
+            return;
+        }
+        PrivilegedShell shell = PrivilegeController.shellFor(mode);
 
         DeviceInfoRepository.CollectResult result;
         try {

@@ -41,6 +41,7 @@ public class SettingsActivity extends BaseActivity {
                 : getString(R.string.settings_weather_city_with, weatherLabel);
         return new String[]{
                 getString(R.string.settings_interval),
+                getString(R.string.settings_keep_alive),
                 weatherItem,
                 getString(R.string.settings_privilege),
                 getString(R.string.settings_device_table),
@@ -85,34 +86,37 @@ public class SettingsActivity extends BaseActivity {
                         startActivity(new Intent(SettingsActivity.this, ReportIntervalActivity.class));
                         break;
                     case 1:
-                        startActivity(new Intent(SettingsActivity.this, WeatherCityActivity.class));
+                        startActivity(new Intent(SettingsActivity.this, KeepAliveSettingsActivity.class));
                         break;
                     case 2:
-                        showPrivilegeDialog();
+                        startActivity(new Intent(SettingsActivity.this, WeatherCityActivity.class));
                         break;
                     case 3:
-                        startActivity(new Intent(SettingsActivity.this, DeviceTableSettingsActivity.class));
+                        showPrivilegeDialog();
                         break;
                     case 4:
-                        startActivity(new Intent(SettingsActivity.this, AppTableSettingsActivity.class));
+                        startActivity(new Intent(SettingsActivity.this, DeviceTableSettingsActivity.class));
                         break;
                     case 5:
-                        startActivity(new Intent(SettingsActivity.this, CpuMapSettingsActivity.class));
+                        startActivity(new Intent(SettingsActivity.this, AppTableSettingsActivity.class));
                         break;
                     case 6:
-                        startActivity(new Intent(SettingsActivity.this, ThemeSettingsActivity.class));
+                        startActivity(new Intent(SettingsActivity.this, CpuMapSettingsActivity.class));
                         break;
                     case 7:
-                        showLanguageDialog();
+                        startActivity(new Intent(SettingsActivity.this, ThemeSettingsActivity.class));
                         break;
                     case 8:
+                        showLanguageDialog();
+                        break;
+                    case 9:
                         // 只开教学页，不动「已引导」标记
                         startActivity(WelcomeActivity.intentForGuide(SettingsActivity.this));
                         break;
-                    case 9:
+                    case 10:
                         startActivity(new Intent(SettingsActivity.this, UpdateSettingsActivity.class));
                         break;
-                    case 10:
+                    case 11:
                         showAboutDialog();
                         break;
                     default:
@@ -303,7 +307,7 @@ public class SettingsActivity extends BaseActivity {
         sb.append(getString(R.string.about_api, Build.VERSION.SDK_INT));
         device.setText(sb.toString());
 
-        String versionName = "5.1.1 Beta2.1";
+        String versionName = "5.3.0 Beta4";
         int versionCode = 0;
         try {
             android.content.pm.PackageInfo info =

@@ -136,7 +136,7 @@
     <string name="hint_hard_truncated">Over 144 characters, the tail was truncated</string>
     <string name="hint_hidden_count">%1$d unavailable field(s) hidden automatically (they do not use the 144 chars)</string>
     <string name="hint_all_hidden">None of the selected fields is available right now, so everything was hidden.</string>
-    <string name="hint_fps_need_foreground">FPS can only be read while VRChat is in the foreground and with the Shizuku / Root channel. VRChat is not in the foreground when you tap Refresh here, so N/A is expected.</string>
+    <string name="hint_fps_need_foreground">FPS is read from whatever app is in the foreground (for example VRChat) and requires the Shizuku / Root channel. When you tap Refresh here, that app is not in the foreground, so N/A is expected.</string>
     <string name="hint_weather_need_city">Weather fields need a city: Settings → Weather city.</string>
     <string name="hint_weather_no_data">No weather data yet: it is fetched automatically once reporting starts, at most once every 30 minutes per city.</string>
 
@@ -186,6 +186,10 @@
     <!-- ==================== Settings menu ==================== -->
     <string name="settings_title">Settings</string>
     <string name="settings_interval">Report interval</string>
+    <string name="settings_keep_alive">Background keep-alive</string>
+    <string name="keep_alive_switch">Enable background keep-alive (exact alarms + wake locks)</string>
+    <string name="keep_alive_benefit">Benefit: the foreground service holds a Wi-Fi lock and uses exact alarms to wake the CPU after the screen turns off; each collection/report releases the lock immediately, so the service is less likely to be frozen or killed and Chatbox updates stay steady.</string>
+    <string name="keep_alive_cost">Cost: exact alarms and wake locks increase battery drain; disable this if battery life matters more, but non-root devices may be killed after the screen turns off.</string>
     <string name="settings_weather_city">Weather city</string>
     <string name="settings_weather_city_with">Weather city (%1$s)</string>
     <string name="settings_privilege">Privilege method</string>
@@ -492,6 +496,7 @@
     <string name="send_err_no_permission">Missing INTERNET permission</string>
     <string name="send_err_exception">Send failed: %1$s</string>
     <string name="log_collect_error">Collection or send error</string>
+    <string name="log_shizuku_rebind_failed">Shizuku connection lost; trying to rebind. Skipping this round, will retry automatically next round.</string>
     <string name="log_collect_failed">Collection failed</string>
     <string name="log_no_fields">No fields selected</string>
     <string name="log_all_unavailable">All selected fields are unavailable, nothing sent</string>

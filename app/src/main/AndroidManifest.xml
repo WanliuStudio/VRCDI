@@ -10,6 +10,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <!-- 后台保活：定时唤醒 + 息屏 CPU 唤醒 + Wi-Fi 锁 -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- 应用内更新：下载完成后交给系统安装器 -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -123,6 +126,11 @@
             android:name=".UpdateSettingsActivity"
             android:exported="false"
             android:label="@string/settings_update" />
+
+        <activity
+            android:name=".KeepAliveSettingsActivity"
+            android:exported="false"
+            android:label="@string/settings_keep_alive" />
 
         <!-- 应用内更新：把下载好的 APK 以 content:// 交给系统安装器 -->
         <provider

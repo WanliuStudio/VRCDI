@@ -132,7 +132,7 @@
     <string name="hint_hard_truncated">144 文字を超えたため末尾を切り捨てました</string>
     <string name="hint_hidden_count">利用不可の項目を %1$d 件自動で隠しました（144 文字を消費しません）</string>
     <string name="hint_all_hidden">選択した項目は現在すべて利用不可のため、すべて隠しました。</string>
-    <string name="hint_fps_need_foreground">FPS は VRChat が前面にあり、Shizuku / Root チャネルのときだけ取得できます。この画面で「再取得」を押すと VRChat は前面にないため、利用不可でも正常です。</string>
+    <string name="hint_fps_need_foreground">FPS は前面にあるアプリ（例：VRChat）の描画レートを読み取るもので、Shizuku / Root チャネルが必要です。この画面で「再取得」を押すと対象アプリは前面にないため、利用不可でも正常です。</string>
     <string name="hint_weather_need_city">天気系の項目は先に都市を選んでください：設定 → 天気の都市。</string>
     <string name="hint_weather_no_data">天気データがまだありません。送信を開始すると自動取得します（同じ都市は 30 分に 1 回まで）。</string>
 
@@ -180,6 +180,10 @@
     <!-- 設定メニュー -->
     <string name="settings_title">設定</string>
     <string name="settings_interval">送信間隔</string>
+    <string name="settings_keep_alive">バックグラウンド維持</string>
+    <string name="keep_alive_switch">バックグラウンド維持を有効化（正確なアラーム + ウェイクロック）</string>
+    <string name="keep_alive_benefit">メリット：フォアグラウンドサービスが Wi-Fi ロックを保持し、正確なアラームで画面オフ後も CPU を起こします。送信が終わるとすぐ解放するため、システムによる停止や強制終了が起きにくくなり、Chatbox の更新が安定します。</string>
+    <string name="keep_alive_cost">デメリット：正確なアラームとウェイクロックで消費電力が増えます。電池を優先するならオフにできますが、非 root 端末では画面オフ後に停止される可能性があります。</string>
     <string name="settings_weather_city">天気の都市</string>
     <string name="settings_weather_city_with">天気の都市（%1$s）</string>
     <string name="settings_privilege">権限の取得方法</string>
@@ -481,6 +485,7 @@
     <string name="send_err_no_permission">INTERNET 権限がありません</string>
     <string name="send_err_exception">送信エラー：%1$s</string>
     <string name="log_collect_error">取得または送信のエラー</string>
+    <string name="log_shizuku_rebind_failed">Shizuku の接続が切れました。再接続を試みています。この回はスキップし、次回自動で再試行します。</string>
     <string name="log_collect_failed">取得に失敗</string>
     <string name="log_no_fields">項目が 1 つも選ばれていません</string>
     <string name="log_all_unavailable">選択した項目は現在すべて利用不可のため送信しませんでした</string>

@@ -2,6 +2,7 @@ package com.vrcdevicecheck.osc.priv;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 
 import com.vrcdevicecheck.osc.R;
 import com.vrcdevicecheck.osc.util.LocaleHelper;
@@ -57,6 +58,36 @@ public class ShizukuShell implements PrivilegedShell {
         } catch (Throwable t) {
             return false;
         }
+    }
+
+    /**
+     * 定时唤醒采集前调用：确认 binder 还在；如果已经断开，尝试让 ShizukuProvider
+     * 重新绑定，并短暂等待 binder 回来（最多约 1 秒）。
+     *
+     * 注意：这个方法会阻塞调用线程，只能在后台线程调用。
+     */
+    public static boolean ensureBound(Context context) {
+        if (context == null) return false;
+        if (ping()) return true;
+
+        // 触发 ShizukuProvider 重新建立 binder 连接（provider 已在 Manifest 注册）
+        try {
+            Uri uri = Uri.parse("content://" + context.getPackageName() + ".shizuku");
+            context.getContentResolver().call(uri, "requestBinder", null, null);
+        } catch (Throwable ignored) {
+            // 旧版本 Shizuku 或 provider 未就绪时忽略，继续轮询
+        }
+
+        for (int i = 0; i < 10; i++) {
+            if (ping()) return true;
+            try {
+                Thread.sleep(100L);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+        return ping();
     }
 
     /** 是否已授权给本应用 */
